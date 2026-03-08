@@ -1,0 +1,85 @@
+WARNING: We recommend using a newer Android Gradle plugin to use compileSdk = 35
+
+This Android Gradle plugin (8.5.2) was tested up to compileSdk = 34.
+
+You are strongly encouraged to update your project to use a newer
+Android Gradle plugin that has been tested with compileSdk = 35.
+
+If you are already using the latest version of the Android Gradle plugin,
+you may need to wait until a newer version with support for compileSdk = 35 is available.
+
+For more information refer to the compatibility table:
+https://d.android.com/r/tools/api-level-support
+
+To suppress this warning, add/update
+    android.suppressUnsupportedCompileSdk=35
+to this project's gradle.properties.
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:rustUpTargetAddAndroidArm64
+> Task :app:cargoBuildAndroidArm64Debug
+> Task :app:installBindgen
+> Task :app:mergeUniffiConfig
+> Task :app:buildBindings
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:generateDebugResValues
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:mergeDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:parseDebugLocalResources
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:javaPreCompileDebug
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets
+> Task :app:desugarDebugFileDependencies
+> Task :app:mergeDebugStartupProfile
+> Task :app:findDynamicLibrariesAndroidArm64Debug
+> Task :app:checkDebugDuplicateClasses
+> Task :app:copyAndroidAndroidArm64Debug
+> Task :app:mergeLibDexDebug
+> Task :app:rustUpTargetAddAndroidArmV7
+> Task :app:mergeExtDexDebug
+> Task :app:processDebugManifestForPackage
+> Task :app:cargoBuildAndroidArmV7Debug
+> Task :app:findDynamicLibrariesAndroidArmV7Debug
+> Task :app:copyAndroidAndroidArmV7Debug
+> Task :app:rustUpTargetAddAndroidX64
+> Task :app:cargoBuildAndroidX64Debug
+> Task :app:findDynamicLibrariesAndroidX64Debug
+> Task :app:copyAndroidAndroidX64Debug
+> Task :app:rustUpTargetAddAndroidX86
+> Task :app:cargoBuildAndroidX86Debug
+> Task :app:findDynamicLibrariesAndroidX86Debug
+> Task :app:copyAndroidAndroidX86Debug
+> Task :app:mergeDebugJniLibFolders
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:processDebugResources
+> Task :app:mergeDebugNativeLibs
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libjnidispatch.so, libtaskgeneral_core.so.
+
+> Task :app:compileDebugKotlin
+> Task :app:compileDebugJavaWithJavac NO-SOURCE
+> Task :app:dexBuilderDebug
+> Task :app:mergeDebugGlobalSynthetics
+> Task :app:processDebugJavaRes
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeDebugJavaResource
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+
+BUILD SUCCESSFUL in 4m 55s
+55 actionable tasks: 55 executed

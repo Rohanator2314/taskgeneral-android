@@ -1,0 +1,28 @@
+   Compiling taskgeneral-core v0.1.0 (/home/rohans/Documents/programming/taskwarrior-android/rust/taskgeneral-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.81s
+     Running unittests src/lib.rs (rust/taskgeneral-core/target/debug/deps/taskgeneral_core-85d3b97154aed7d3)
+
+running 14 tests
+test task_manager::tests::test_create_task_empty_description ... ok
+test task_manager::tests::test_create_task ... ok
+test task_manager::tests::test_get_task ... ok
+test task_manager::tests::test_complete_task ... ok
+test task_manager::tests::test_add_task_tag ... ok
+test task_manager::tests::test_delete_task ... ok
+test task_manager::tests::test_get_task_not_found ... ok
+test task_manager::tests::test_remove_task_tag ... ok
+test tests::test_version ... ok
+test task_manager::tests::test_set_invalid_priority ... ok
+test task_manager::tests::test_list_tasks ... ok
+test task_manager::tests::test_set_task_project ... ok
+test task_manager::tests::test_update_task_description ... ok
+test task_manager::tests::test_set_task_priority ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+   Doc-tests taskgeneral_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

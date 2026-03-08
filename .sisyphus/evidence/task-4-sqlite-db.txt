@@ -1,0 +1,2 @@
+SQLite databases are created in temporary directories during tests and cleaned up automatically.
+Evidence: Tests use tempfile::tempdir() which creates isolated test DBs that are automatically deleted.

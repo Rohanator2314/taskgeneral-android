@@ -1,0 +1,26 @@
+QA Scenario: App shell renders with Material Design 3 theme
+Status: MANUAL VERIFICATION REQUIRED
+
+Automated screenshot capture skipped - emulator boot timeout.
+
+Manual verification steps:
+1. Start emulator: emulator -avd Medium_Phone_API_36.1
+2. Install APK: adb install app/build/outputs/apk/debug/app-debug.apk
+3. Launch app: adb shell am start -n dev.rohans.taskwarrior/.MainActivity
+4. Verify:
+   - App launches showing "TaskGeneral" in top bar
+   - Settings icon visible in top bar
+   - Default route shows "Task List" stub text
+   - Material Design 3 theme applied
+   - No crashes in logcat
+
+Build artifacts verified:
+- APK exists: app/build/outputs/apk/debug/app-debug.apk (867M)
+- Build successful: ./gradlew assembleDebug
+- All navigation tests pass: 6/6 tests in NavigationTest
+
+Code verification:
+- MainActivity.kt: NavHost configured with all 3 routes
+- TopAppBar: Settings icon navigates to sync_settings route
+- Theme: TaskGeneralTheme wraps MaterialTheme with M3 colorScheme
+- Stub screens: TaskListScreen, TaskEditScreen, SyncSettingsScreen all implemented

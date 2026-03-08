@@ -1,0 +1,5 @@
+2.  **Slint**: A declarative UI toolkit for Rust.
+3.  **Dioxus**: A portable UI framework for Rust using web technologies or native renderers.
+4.  **Flutter + Rust**: Using Flutter for the UI and Rust for logic via FFI.
+*   **Slint/Dioxus**: While these provide a "pure Rust" experience, their ecosystem for mobile-specific features (like system integrations, deep linking, and complex Android-specific UI patterns) is less mature than native Android tooling.
+*   **Flutter**: Flutter offers great cross-platform capabilities, but adds another heavy layer (Dart VM) between the UI and the Rust core. It also lacks the seamless integration with the Android ecosystem that Kotlin provides.
