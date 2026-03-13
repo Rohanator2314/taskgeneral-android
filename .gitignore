@@ -1,0 +1,25 @@
+# Build outputs
+build/
+app/build/
+app/src/main/jniLibs/
+
+# Rust build
+rust/taskgeneral-core/target/
+
+# IDE
+.idea/
+*.iml
+
+# Gradle
+.gradle/
+local.properties
+
+# Sisyphus working files
+.sisyphus/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# GitHub Actions (committed separately if needed)
+.github/
