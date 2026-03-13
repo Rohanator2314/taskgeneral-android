@@ -18,7 +18,9 @@ fun TaskGeneralTopAppBar(navController: NavController) {
         title = { Text("TaskGeneral") },
         actions = {
             IconButton(onClick = { 
-                navController.navigate(Route.SyncSettings.route)
+                navController.navigate(Route.SyncSettings.route) {
+                    launchSingleTop = true
+                }
             }) {
                 Icon(
                     imageVector = Icons.Default.Settings,

@@ -62,8 +62,13 @@ class TaskViewModel(
     private val _activeOperation = MutableStateFlow<TaskOperation?>(null)
     val activeOperation: StateFlow<TaskOperation?> = _activeOperation.asStateFlow()
 
+    // Cached unfiltered task list to avoid re-fetching from Rust on filter changes
+    private var _cachedAllTasks: List<WorkingSetItem> = emptyList()
+    private var _tasksLoaded = false
+
     init {
         loadSyncConfig()
+        loadTasks()
     }
 
     fun enterSelectionMode(operation: TaskOperation? = null) {
@@ -172,6 +177,14 @@ class TaskViewModel(
             prefs.edit().putString("client_id", cid).apply()
         }
         _clientId.value = cid
+
+        if (url.isNotEmpty() && secret.isNotEmpty()) {
+            viewModelScope.launch {
+                try {
+                    repository.configureSync(url, secret, cid)
+                } catch (_: Exception) { }
+            }
+        }
     }
 
     fun saveSyncConfig(url: String, secret: String, clientId: String) {
@@ -228,7 +241,9 @@ class TaskViewModel(
             _isLoading.value = true
             try {
                 val allTasks = repository.getWorkingSet()
-                
+                _cachedAllTasks = allTasks
+                _tasksLoaded = true
+
                 _availableProjects.value = allTasks
                     .mapNotNull { it.task.project }
                     .filter { it.isNotBlank() }
@@ -241,30 +256,35 @@ class TaskViewModel(
                     .distinct()
                     .sorted()
 
-                val currentFilter = _filter.value
-                
-                val filteredTasks = if (currentFilter.status == null && 
-                                   currentFilter.project == null && 
-                                   currentFilter.tag == null) {
-                    allTasks
-                } else {
-                    allTasks.filter { item ->
-                        val task = item.task
-                        (currentFilter.status == null || task.status == currentFilter.status) &&
-                        (currentFilter.project == null || task.project == currentFilter.project) &&
-                        (currentFilter.tag == null || task.tags.contains(currentFilter.tag))
-                    }
-                }
-                _tasks.value = filteredTasks
+                applyFilter()
             } finally {
                 _isLoading.value = false
+            }
+        }
+    }
+
+    private fun applyFilter() {
+        val currentFilter = _filter.value
+        val allTasks = _cachedAllTasks
+
+        _tasks.value = if (currentFilter.status == null &&
+            currentFilter.project == null &&
+            currentFilter.tag == null
+        ) {
+            allTasks
+        } else {
+            allTasks.filter { item ->
+                val task = item.task
+                (currentFilter.status == null || task.status == currentFilter.status) &&
+                (currentFilter.project == null || task.project == currentFilter.project) &&
+                (currentFilter.tag == null || task.tags.contains(currentFilter.tag))
             }
         }
     }
     
     fun setFilter(filter: TaskFilter) {
         _filter.value = filter
-        loadTasks()
+        applyFilter()
     }
     
     fun createTask(description: String, onComplete: (TaskInfo) -> Unit = {}) {
@@ -338,10 +358,6 @@ class TaskViewModel(
             _isLoading.value = true
             _syncStatus.value = "Syncing..."
             try {
-                if (_serverUrl.value.isNotEmpty() && _encryptionSecret.value.isNotEmpty()) {
-                    repository.configureSync(_serverUrl.value, _encryptionSecret.value, _clientId.value)
-                }
-
                 val result = repository.sync()
                 loadTasks()
                 if (result.success) {

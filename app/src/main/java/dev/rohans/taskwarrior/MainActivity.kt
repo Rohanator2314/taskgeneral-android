@@ -15,7 +15,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.rohans.taskwarrior.navigation.Route
-import dev.rohans.taskwarrior.ui.components.TaskGeneralTopAppBar
 import dev.rohans.taskwarrior.ui.screens.SyncSettingsScreen
 import dev.rohans.taskwarrior.ui.screens.TaskEditScreen
 import dev.rohans.taskwarrior.ui.screens.TaskListScreen
@@ -38,8 +37,7 @@ fun TaskGeneralApp() {
     val navController = rememberNavController()
     
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        topBar = { TaskGeneralTopAppBar(navController) }
+        modifier = Modifier.fillMaxSize()
     ) { innerPadding ->
         NavHost(
             navController = navController,

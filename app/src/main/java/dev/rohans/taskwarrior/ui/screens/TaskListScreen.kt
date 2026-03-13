@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,6 +17,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.BottomAppBar
@@ -86,14 +88,11 @@ fun TaskListScreen(
         viewModel.clearSelection()
     }
 
-    LaunchedEffect(navController.currentBackStackEntry) {
+    LaunchedEffect(Unit) {
         val activity = (context as? android.app.Activity)
         val hasSeed = activity?.intent?.getBooleanExtra("seed", false) == true
-        android.util.Log.d("TaskListScreen", "BackStackEntry changed or initial load. Has seed extra: $hasSeed")
         if (hasSeed) {
             viewModel.seedDebugTasks()
-        } else {
-            viewModel.loadTasks()
         }
     }
 
@@ -123,6 +122,43 @@ fun TaskListScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            if (isSelectionMode) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(horizontal = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    IconButton(onClick = { viewModel.clearSelection() }) {
+                        Icon(Icons.Default.Close, "Close")
+                    }
+                    Text(
+                        text = "${selectedUuids.size} selected",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Box(modifier = Modifier.padding(end = 8.dp))
+                }
+            } else {
+                TopAppBar(
+                    title = { Text("TaskGeneral") },
+                    actions = {
+                        IconButton(onClick = {
+                            navController.navigate(Route.SyncSettings.route) {
+                                launchSingleTop = true
+                            }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings"
+                            )
+                        }
+                    }
+                )
+            }
+        },
         bottomBar = {
             BottomAppBar(
                 actions = {
@@ -194,7 +230,11 @@ fun TaskListScreen(
                             }
                         } else {
                             IconButton(
-                                onClick = { navController.navigate(Route.TaskEdit.createRoute(null)) }
+                                onClick = {
+                                    navController.navigate(Route.TaskEdit.createRoute(null)) {
+                                        launchSingleTop = true
+                                    }
+                                }
                             ) {
                                 Icon(Icons.Default.Add, contentDescription = "New Task")
                             }
@@ -211,20 +251,6 @@ fun TaskListScreen(
                 .nestedScroll(pullRefreshState.nestedScrollConnection)
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                if (isSelectionMode) {
-                    TopAppBar(
-                        title = { Text("${selectedUuids.size} selected") },
-                        navigationIcon = {
-                            IconButton(onClick = { viewModel.clearSelection() }) {
-                                Icon(Icons.Default.Close, "Close")
-                            }
-                        },
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
-                    )
-                }
-                
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -264,7 +290,9 @@ fun TaskListScreen(
                                     if (isSelectionMode) {
                                         viewModel.toggleTaskSelection(item.task.uuid)
                                     } else {
-                                        navController.navigate(Route.TaskEdit.createRoute(item.task.uuid))
+                                        navController.navigate(Route.TaskEdit.createRoute(item.task.uuid)) {
+                                            launchSingleTop = true
+                                        }
                                     }
                                 },
                                 onLongClick = {
