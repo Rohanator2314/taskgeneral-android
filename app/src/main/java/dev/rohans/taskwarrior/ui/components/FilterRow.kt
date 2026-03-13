@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Close
@@ -44,6 +45,7 @@ fun FilterRow(
         val statuses = listOf("pending", "completed", "waiting", "deleted")
 
         FilterChip(
+            shape = RectangleShape,
             selected = currentFilter.status == null && currentFilter.project == null && currentFilter.tag == null,
             onClick = {
                 onFilterChange(TaskFilter(null, null, null))
@@ -53,6 +55,7 @@ fun FilterRow(
 
         statuses.forEach { status ->
             FilterChip(
+            shape = RectangleShape,
                 selected = currentFilter.status == status,
                 onClick = {
                     onFilterChange(currentFilter.copy(status = status))
@@ -90,6 +93,7 @@ private fun FilterDropdown(
 
     Box {
         FilterChip(
+            shape = RectangleShape,
             selected = selectedItem != null,
             onClick = { expanded = true },
             label = {

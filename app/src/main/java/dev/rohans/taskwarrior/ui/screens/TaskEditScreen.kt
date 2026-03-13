@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -84,12 +85,14 @@ fun TaskEditScreen(
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     OutlinedButton(
+                        shape = RectangleShape,
                         modifier = Modifier.weight(1f),
                         onClick = { navController.popBackStack() }
                     ) {
                         Text("Cancel")
                     }
                     Button(
+                        shape = RectangleShape,
                         modifier = Modifier.weight(1f),
                         enabled = description.isNotBlank() && !isLoading,
                         onClick = {
@@ -215,6 +218,7 @@ fun TaskEditScreen(
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(tags) { tag ->
                                 InputChip(
+                                    shape = RectangleShape,
                                     selected = true,
                                     onClick = { },
                                     label = { Text(tag) },

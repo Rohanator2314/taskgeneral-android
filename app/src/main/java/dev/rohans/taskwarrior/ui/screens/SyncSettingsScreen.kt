@@ -42,6 +42,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.graphics.RectangleShape
 
 @Composable
 fun SyncSettingsScreen(
@@ -76,11 +77,13 @@ fun SyncSettingsScreen(
 
     if (showClearDataDialog) {
         AlertDialog(
+            shape = RectangleShape,
             onDismissRequest = { showClearDataDialog = false },
             title = { Text("Clear Local Data?") },
             text = { Text("This will delete all local tasks. This cannot be undone. You can re-sync from the server afterward.") },
             confirmButton = {
                 TextButton(
+                    shape = RectangleShape,
                     onClick = {
                         viewModel.clearLocalData()
                         showClearDataDialog = false
@@ -91,7 +94,10 @@ fun SyncSettingsScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showClearDataDialog = false }) {
+                TextButton(
+                    shape = RectangleShape,
+                    onClick = { showClearDataDialog = false }
+                ) {
                     Text("Cancel")
                 }
             }
@@ -133,7 +139,10 @@ fun SyncSettingsScreen(
                 visualTransformation = if (isSecretVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 trailingIcon = {
-                    TextButton(onClick = { isSecretVisible = !isSecretVisible }) {
+                    TextButton(
+                        shape = RectangleShape,
+                        onClick = { isSecretVisible = !isSecretVisible }
+                    ) {
                         Text(if (isSecretVisible) "Hide" else "Show")
                     }
                 }
@@ -146,15 +155,19 @@ fun SyncSettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 trailingIcon = {
-                    TextButton(onClick = { 
-                        clientIdInput = java.util.UUID.randomUUID().toString()
-                    }) {
+                    TextButton(
+                        shape = RectangleShape,
+                        onClick = { 
+                            clientIdInput = java.util.UUID.randomUUID().toString()
+                        }
+                    ) {
                         Text("New")
                     }
                 }
             )
 
             Button(
+                shape = RectangleShape,
                 onClick = { viewModel.saveSyncConfig(urlInput, secretInput, clientIdInput) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading
@@ -170,6 +183,7 @@ fun SyncSettingsScreen(
             )
 
             Button(
+                shape = RectangleShape,
                 onClick = { viewModel.sync() },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading && urlInput.isNotEmpty() && secretInput.isNotEmpty()
@@ -208,6 +222,7 @@ fun SyncSettingsScreen(
             )
 
             OutlinedButton(
+                shape = RectangleShape,
                 onClick = { showClearDataDialog = true },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.outlinedButtonColors(
