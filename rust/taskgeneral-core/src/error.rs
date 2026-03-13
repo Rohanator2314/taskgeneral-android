@@ -1,6 +1,7 @@
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, uniffi::Error)]
+#[uniffi(flat_error)]
 pub enum TaskError {
     #[error("Task not found: {0}")]
     TaskNotFound(String),

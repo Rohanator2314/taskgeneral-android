@@ -11,6 +11,7 @@ use tokio::runtime::Runtime;
 pub struct TaskManager {
     replica: Replica<SqliteStorage>,
     runtime: Runtime,
+    data_dir: PathBuf,
     sync_url: Option<String>,
     sync_client_id: Option<TcUuid>,
     sync_secret: Option<Vec<u8>>,
@@ -24,13 +25,14 @@ impl TaskManager {
         let path = PathBuf::from(data_dir);
         
         let replica = runtime.block_on(async {
-            let storage = SqliteStorage::new(path, AccessMode::ReadWrite, true).await?;
+            let storage = SqliteStorage::new(path.clone(), AccessMode::ReadWrite, true).await?;
             Ok::<Replica<SqliteStorage>, taskchampion::Error>(Replica::new(storage))
         })?;
 
         Ok(TaskManager { 
             replica, 
             runtime,
+            data_dir: path,
             sync_url: None,
             sync_client_id: None,
             sync_secret: None,
@@ -128,14 +130,17 @@ impl TaskManager {
         })
     }
 
-    pub fn get_working_set(&mut self) -> Result<Vec<(usize, TaskInfo)>> {
+    pub fn get_working_set(&mut self) -> Result<Vec<crate::models::WorkingSetItem>> {
         self.runtime.block_on(async {
             let working_set = self.replica.working_set().await?;
             let mut result = Vec::new();
 
             for (id, uuid) in working_set.iter() {
                 if let Some(task) = self.replica.get_task(uuid).await? {
-                    result.push((id, task_to_info(&task)));
+                    result.push(crate::models::WorkingSetItem {
+                        id: id as u64,
+                        task: task_to_info(&task),
+                    });
                 }
             }
 
@@ -244,6 +249,29 @@ impl TaskManager {
             .ok_or_else(|| TaskError::TaskNotFound(uuid_str.to_string()))
     }
 
+    pub fn uncomplete_task(&mut self, uuid_str: &str) -> Result<TaskInfo> {
+        let uuid = TcUuid::parse_str(uuid_str)?;
+
+        let result = self.runtime.block_on(async {
+            let task_opt = self.replica.get_task(uuid).await?;
+            Ok::<Option<Task>, taskchampion::Error>(task_opt)
+        })?;
+        
+        let mut task = result.ok_or_else(|| TaskError::TaskNotFound(uuid_str.to_string()))?;
+
+        self.runtime.block_on(async {
+            let mut ops = Operations::new();
+            task.set_status(Status::Pending, &mut ops)?;
+
+            self.replica.commit_operations(ops).await?;
+
+            Ok::<(), taskchampion::Error>(())
+        })?;
+        
+        self.get_task(uuid_str)?
+            .ok_or_else(|| TaskError::TaskNotFound(uuid_str.to_string()))
+    }
+
     pub fn delete_task(&mut self, uuid_str: &str) -> Result<()> {
         let uuid = TcUuid::parse_str(uuid_str)?;
 
@@ -321,6 +349,38 @@ impl TaskManager {
                 message: format!("Sync failed: {}", e),
             }),
         }
+    }
+
+    pub fn clear_local_data(&mut self) -> Result<()> {
+        let data_dir = self.data_dir.clone();
+        let db_file = data_dir.join("taskchampion.sqlite3");
+        let wal_file = data_dir.join("taskchampion.sqlite3-wal");
+        let shm_file = data_dir.join("taskchampion.sqlite3-shm");
+
+        let placeholder = self.runtime.block_on(async {
+            let storage =
+                SqliteStorage::new(data_dir.clone(), AccessMode::ReadWrite, true).await?;
+            Ok::<Replica<SqliteStorage>, taskchampion::Error>(Replica::new(storage))
+        })?;
+
+        let _old_replica = std::mem::replace(&mut self.replica, placeholder);
+        drop(_old_replica);
+
+        for f in [&db_file, &wal_file, &shm_file] {
+            let _ = std::fs::remove_file(f);
+        }
+
+        let fresh_replica = self.runtime.block_on(async {
+            let storage =
+                SqliteStorage::new(data_dir, AccessMode::ReadWrite, true).await?;
+            Ok::<Replica<SqliteStorage>, taskchampion::Error>(Replica::new(storage))
+        })?;
+
+        self.replica = fresh_replica;
+        self.sync_url = None;
+        self.sync_client_id = None;
+        self.sync_secret = None;
+        Ok(())
     }
 }
 
@@ -733,23 +793,23 @@ mod tests {
         assert_eq!(filtered.len(), 3);
     }
 
-    #[test]
-    fn test_working_set() {
-        let (mut manager, _temp) = create_test_manager();
-        
-        manager.create_task("Pending task 1").unwrap();
-        manager.create_task("Pending task 2").unwrap();
-        let task3 = manager.create_task("Task to complete").unwrap();
-        manager.complete_task(&task3.uuid).unwrap();
-        
-        let working_set = manager.get_working_set().unwrap();
-        
-        let pending_tasks: Vec<_> = working_set.iter().filter(|(_, t)| t.status == "pending").collect();
-        assert_eq!(pending_tasks.len(), 2);
-        for (id, _task) in &working_set {
-            assert!(id > &0);
-        }
-    }
+     #[test]
+     fn test_working_set() {
+         let (mut manager, _temp) = create_test_manager();
+         
+         manager.create_task("Pending task 1").unwrap();
+         manager.create_task("Pending task 2").unwrap();
+         let task3 = manager.create_task("Task to complete").unwrap();
+         manager.complete_task(&task3.uuid).unwrap();
+         
+         let working_set = manager.get_working_set().unwrap();
+         
+         let pending_tasks: Vec<_> = working_set.iter().filter(|item| item.task.status == "pending").collect();
+         assert_eq!(pending_tasks.len(), 2);
+         for item in &working_set {
+             assert!(item.id > 0);
+         }
+     }
 
     #[test]
     fn test_sync_config_creation() {
@@ -834,5 +894,176 @@ mod tests {
         assert!(fetched2.is_some());
         assert_eq!(fetched1.unwrap().description, "Task before sync");
         assert_eq!(fetched2.unwrap().description, "Another task");
+    }
+
+    #[test]
+    fn test_e2e_sync_roundtrip() {
+        // Skip test if sync server URL not configured
+        let sync_url = match std::env::var("TASKGENERAL_SYNC_URL") {
+            Ok(url) if !url.is_empty() => url,
+            _ => {
+                eprintln!("Skipping test_e2e_sync_roundtrip: TASKGENERAL_SYNC_URL not set");
+                return;
+            }
+        };
+
+        // Create two separate replicas with unique data directories
+        let temp_a = TestTempDir::new();
+        let temp_b = TestTempDir::new();
+        
+        let mut replica_a = TaskManager::new(temp_a.path().to_str().unwrap()).unwrap();
+        let mut replica_b = TaskManager::new(temp_b.path().to_str().unwrap()).unwrap();
+
+        // Use same encryption secret, server, AND client_id for both replicas
+        // This simulates one device syncing data, then a second device (or restored device)
+        // using the same credentials to retrieve the synced data
+        let shared_client_id = TcUuid::new_v4().to_string();
+        let encryption_secret = "test-sync-roundtrip-secret";
+
+        // Configure sync for both replicas
+        replica_a.configure_sync(&sync_url, encryption_secret, &shared_client_id).unwrap();
+        replica_b.configure_sync(&sync_url, encryption_secret, &shared_client_id).unwrap();
+
+        // Step 1: Initial sync for both replicas to establish server connection
+        let init_sync_a = replica_a.sync().unwrap();
+        assert!(
+            init_sync_a.success,
+            "Replica A initial sync failed: {}",
+            init_sync_a.message
+        );
+
+        let init_sync_b = replica_b.sync().unwrap();
+        assert!(
+            init_sync_b.success,
+            "Replica B initial sync failed: {}",
+            init_sync_b.message
+        );
+
+        // Step 2: Create a task in replica A
+        let task_desc = "Roundtrip sync test task";
+        let task_a = replica_a.create_task(task_desc).unwrap();
+        let task_uuid = task_a.uuid.clone();
+
+        // Verify task exists in replica A
+        let fetched_a = replica_a.get_task(&task_uuid).unwrap();
+        assert!(fetched_a.is_some());
+        assert_eq!(fetched_a.unwrap().description, task_desc);
+
+        // Step 3: Sync replica A to server (push the new task)
+        let sync_result_a = replica_a.sync().unwrap();
+        assert!(
+            sync_result_a.success,
+            "Replica A sync failed: {}",
+            sync_result_a.message
+        );
+
+        eprintln!("Replica A synced task {}", task_uuid);
+
+        // Step 4: Sync replica B from server (pull the new task)
+        let sync_result_b = replica_b.sync().unwrap();
+        assert!(
+            sync_result_b.success,
+            "Replica B sync failed: {}",
+            sync_result_b.message
+        );
+
+        // Step 5: Verify task appears in replica B
+        let fetched_b = replica_b.get_task(&task_uuid).unwrap();
+        assert!(
+            fetched_b.is_some(),
+            "Task {} not found in replica B after sync",
+            task_uuid
+        );
+        
+        let task_b = fetched_b.unwrap();
+        assert_eq!(task_b.uuid, task_uuid);
+        assert_eq!(task_b.description, task_desc);
+        assert_eq!(task_b.status, "pending");
+
+        eprintln!("✓ Sync roundtrip test passed: task {} synced successfully", task_uuid);
+    }
+
+    /// Cross-device sync test: connects to the sync server using the VM's
+    /// client_id and encryption_secret, syncs, and lists all tasks received.
+    /// Then creates a task from this "Device B" and syncs it back.
+    ///
+    /// Requires env vars:
+    ///   TASKGENERAL_SYNC_URL       - sync server URL (e.g. http://localhost:8443)
+    ///   TASKGENERAL_VM_CLIENT_ID   - the VM's client_id UUID
+    ///   TASKGENERAL_VM_SECRET      - the VM's encryption_secret
+    #[test]
+    fn test_cross_device_sync_with_vm() {
+        let sync_url = match std::env::var("TASKGENERAL_SYNC_URL") {
+            Ok(url) if !url.is_empty() => url,
+            _ => {
+                eprintln!("Skipping test_cross_device_sync_with_vm: TASKGENERAL_SYNC_URL not set");
+                return;
+            }
+        };
+        let client_id = match std::env::var("TASKGENERAL_VM_CLIENT_ID") {
+            Ok(id) if !id.is_empty() => id,
+            _ => {
+                eprintln!("Skipping test_cross_device_sync_with_vm: TASKGENERAL_VM_CLIENT_ID not set");
+                return;
+            }
+        };
+        let secret = match std::env::var("TASKGENERAL_VM_SECRET") {
+            Ok(s) if !s.is_empty() => s,
+            _ => {
+                eprintln!("Skipping test_cross_device_sync_with_vm: TASKGENERAL_VM_SECRET not set");
+                return;
+            }
+        };
+
+        // --- Phase 1: Pull tasks from VM (Device A) ---
+        let temp_b = TestTempDir::new();
+        let mut device_b = TaskManager::new(temp_b.path().to_str().unwrap()).unwrap();
+        device_b.configure_sync(&sync_url, &secret, &client_id).unwrap();
+
+        let sync_result = device_b.sync().unwrap();
+        assert!(
+            sync_result.success,
+            "Device B sync failed: {}",
+            sync_result.message
+        );
+        eprintln!("Device B synced successfully: {}", sync_result.message);
+
+        let tasks = device_b.list_tasks().unwrap();
+        eprintln!("Device B received {} tasks from server:", tasks.len());
+        for task in &tasks {
+            eprintln!(
+                "  - [{}] {} (status={}, project={:?}, priority={:?})",
+                task.uuid, task.description, task.status,
+                task.project, task.priority
+            );
+        }
+
+        // Verify we got the VM's task
+        let vm_task = tasks.iter().find(|t| t.description == "Sync test from VM device A");
+        assert!(
+            vm_task.is_some(),
+            "Expected to find 'Sync test from VM device A' in synced tasks, got: {:?}",
+            tasks.iter().map(|t| &t.description).collect::<Vec<_>>()
+        );
+        let vm_task = vm_task.unwrap();
+        assert_eq!(vm_task.status, "pending");
+        assert_eq!(vm_task.priority.as_deref(), Some("H"));
+        assert_eq!(vm_task.project.as_deref(), Some("test"));
+        eprintln!("✓ Phase 1 PASSED: VM task received on Device B");
+
+        // --- Phase 2: Create a task on Device B and sync back ---
+        let new_task = device_b.create_task("Sync test from Rust device B").unwrap();
+        let new_uuid = new_task.uuid.clone();
+        eprintln!("Device B created task: {} ({})", new_task.description, new_uuid);
+
+        let sync_result2 = device_b.sync().unwrap();
+        assert!(
+            sync_result2.success,
+            "Device B second sync failed: {}",
+            sync_result2.message
+        );
+        eprintln!("✓ Phase 2: Device B synced new task to server");
+        eprintln!("  VM should now run 'task sync' to receive task '{}'", new_uuid);
+        eprintln!("✓ Cross-device sync test PASSED");
     }
 }
