@@ -5,8 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
@@ -36,31 +34,25 @@ class MainActivity : ComponentActivity() {
 fun TaskGeneralApp() {
     val navController = rememberNavController()
     
-    Scaffold(
+    NavHost(
+        navController = navController,
+        startDestination = Route.TaskList.route,
         modifier = Modifier.fillMaxSize()
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Route.TaskList.route,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            composable(Route.TaskList.route) {
-                TaskListScreen(navController)
-            }
-            
-            composable(
-                route = Route.TaskEdit.route,
-                arguments = listOf(navArgument("uuid") { type = NavType.StringType })
-            ) { backStackEntry ->
-                val uuid = backStackEntry.arguments?.getString("uuid")
-                TaskEditScreen(navController, uuid)
-            }
-            
-            composable(Route.SyncSettings.route) {
-                SyncSettingsScreen(navController)
-            }
+    ) {
+        composable(Route.TaskList.route) {
+            TaskListScreen(navController)
+        }
+        
+        composable(
+            route = Route.TaskEdit.route,
+            arguments = listOf(navArgument("uuid") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val uuid = backStackEntry.arguments?.getString("uuid")
+            TaskEditScreen(navController, uuid)
+        }
+        
+        composable(Route.SyncSettings.route) {
+            SyncSettingsScreen(navController)
         }
     }
 }
