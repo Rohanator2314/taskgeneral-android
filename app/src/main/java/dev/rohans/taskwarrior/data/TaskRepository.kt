@@ -36,6 +36,10 @@ class TaskRepository(dataDir: File) {
         taskManager.completeTask(uuid)
     }
 
+    suspend fun uncompleteTask(uuid: String): TaskInfo = withContext(Dispatchers.IO) {
+        taskManager.uncompleteTask(uuid)
+    }
+
     suspend fun deleteTask(uuid: String): Unit = withContext(Dispatchers.IO) {
         taskManager.deleteTask(uuid)
     }
@@ -50,5 +54,9 @@ class TaskRepository(dataDir: File) {
 
     suspend fun sync(): SyncResult = withContext(Dispatchers.IO) {
         taskManager.sync()
+    }
+
+    suspend fun clearLocalData(): Unit = withContext(Dispatchers.IO) {
+        taskManager.clearLocalData()
     }
 }
