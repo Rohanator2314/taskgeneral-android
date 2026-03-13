@@ -1,6 +1,5 @@
 package dev.rohans.taskwarrior.ui.screens
 
-import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -17,6 +16,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import dev.rohans.taskwarrior.utils.EncryptedPreferencesHelper
 import dev.rohans.taskwarrior.viewmodel.TaskViewModel
 import dev.rohans.taskwarrior.viewmodel.TaskViewModelFactory
 import uniffi.taskgeneral_core.TaskUpdate
@@ -30,7 +30,8 @@ fun TaskEditScreen(
     viewModel: TaskViewModel = viewModel(
         factory = TaskViewModelFactory(
             LocalContext.current.filesDir,
-            LocalContext.current.getSharedPreferences("taskwarrior_prefs", Context.MODE_PRIVATE)
+            EncryptedPreferencesHelper.getEncryptedSharedPreferences(LocalContext.current),
+            LocalContext.current
         )
     )
 ) {
@@ -96,7 +97,7 @@ fun TaskEditScreen(
                                 description = description,
                                 project = if (project.isBlank()) null else project,
                                 tags = tags,
-                                priority = if (priority.isBlank()) null else priority
+                                priority = priority
                             )
 
                             if (isNewTask) {

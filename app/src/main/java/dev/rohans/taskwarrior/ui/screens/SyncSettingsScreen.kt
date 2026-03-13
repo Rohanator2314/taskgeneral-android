@@ -1,6 +1,5 @@
 package dev.rohans.taskwarrior.ui.screens
 
-import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,8 +34,14 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import dev.rohans.taskwarrior.utils.EncryptedPreferencesHelper
 import dev.rohans.taskwarrior.viewmodel.TaskViewModel
 import dev.rohans.taskwarrior.viewmodel.TaskViewModelFactory
+
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.BorderStroke
 
 @Composable
 fun SyncSettingsScreen(
@@ -44,7 +49,8 @@ fun SyncSettingsScreen(
     viewModel: TaskViewModel = viewModel(
         factory = TaskViewModelFactory(
             LocalContext.current.filesDir,
-            LocalContext.current.getSharedPreferences("taskwarrior_prefs", Context.MODE_PRIVATE)
+            EncryptedPreferencesHelper.getEncryptedSharedPreferences(LocalContext.current),
+            LocalContext.current
         )
     )
 ) {
@@ -56,13 +62,40 @@ fun SyncSettingsScreen(
 
     var urlInput by remember { mutableStateOf("") }
     var secretInput by remember { mutableStateOf("") }
+    var clientIdInput by remember { mutableStateOf("") }
     var isSecretVisible by remember { mutableStateOf(false) }
     var initialized by remember { mutableStateOf(false) }
+    var showClearDataDialog by remember { mutableStateOf(false) }
 
-    if (!initialized && serverUrl.isNotEmpty()) {
+    if (!initialized && (serverUrl.isNotEmpty() || clientId.isNotEmpty())) {
         urlInput = serverUrl
         secretInput = encryptionSecret
+        clientIdInput = clientId
         initialized = true
+    }
+
+    if (showClearDataDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearDataDialog = false },
+            title = { Text("Clear Local Data?") },
+            text = { Text("This will delete all local tasks. This cannot be undone. You can re-sync from the server afterward.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.clearLocalData()
+                        showClearDataDialog = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Clear")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearDataDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 
     Box(
@@ -81,7 +114,7 @@ fun SyncSettingsScreen(
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.primary
             )
-
+            
             OutlinedTextField(
                 value = urlInput,
                 onValueChange = { urlInput = it },
@@ -107,16 +140,22 @@ fun SyncSettingsScreen(
             )
 
             OutlinedTextField(
-                value = clientId,
-                onValueChange = {},
+                value = clientIdInput,
+                onValueChange = { clientIdInput = it },
                 label = { Text("Client ID") },
                 modifier = Modifier.fillMaxWidth(),
-                readOnly = true,
-                singleLine = true
+                singleLine = true,
+                trailingIcon = {
+                    TextButton(onClick = { 
+                        clientIdInput = java.util.UUID.randomUUID().toString()
+                    }) {
+                        Text("New")
+                    }
+                }
             )
 
             Button(
-                onClick = { viewModel.saveSyncConfig(urlInput, secretInput) },
+                onClick = { viewModel.saveSyncConfig(urlInput, secretInput, clientIdInput) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLoading
             ) {
@@ -159,6 +198,27 @@ fun SyncSettingsScreen(
                         MaterialTheme.colorScheme.primary
                 )
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Text(
+                text = "Danger Zone",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.error
+            )
+
+            OutlinedButton(
+                onClick = { showClearDataDialog = true },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+            ) {
+                Text("Clear Local Data")
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
