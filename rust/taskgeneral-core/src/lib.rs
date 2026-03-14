@@ -3,7 +3,7 @@ pub mod models;
 pub mod task_manager;
 
 use error::Result;
-use models::{SyncResult, TaskFilter, TaskInfo, TaskUpdate, WorkingSetItem};
+use models::{SortField, SyncResult, TaskFilter, TaskInfo, TaskUpdate, WorkingSetItem};
 use std::sync::{Arc, Mutex};
 use task_manager::TaskManager;
 
@@ -83,6 +83,18 @@ impl TaskManagerWrapper {
 
     pub fn clear_local_data(&self) -> Result<()> {
         self.inner.lock().unwrap().clear_local_data()
+    }
+
+    pub fn start_task(&self, uuid: String) -> Result<TaskInfo> {
+        self.inner.lock().unwrap().start_task(&uuid)
+    }
+
+    pub fn stop_task(&self, uuid: String) -> Result<TaskInfo> {
+        self.inner.lock().unwrap().stop_task(&uuid)
+    }
+
+    pub fn list_tasks_sorted(&self, filter: TaskFilter, sort_by: SortField) -> Result<Vec<TaskInfo>> {
+        self.inner.lock().unwrap().list_tasks_sorted(filter, sort_by)
     }
 }
 
