@@ -17,10 +17,14 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import uniffi.taskgeneral_core.WorkingSetItem
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -76,9 +80,27 @@ fun TaskItem(
                             )
                         }
                     }
+
+                    if (task.isActive) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "ACTIVE",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    if (task.urgency > 0.0) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = String.format("%.1f", task.urgency),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
                 
-                if (task.project != null || task.tags.isNotEmpty() || task.status != "pending") {
+                if (task.project != null || task.tags.isNotEmpty() || task.status != "pending" || task.due != null || task.isActive || task.isWaiting || task.recur != null) {
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -94,11 +116,50 @@ fun TaskItem(
                             }
                         }
 
+                        task.due?.let { due ->
+                            val parseResult = remember(due) {
+                                try {
+                                    val instant = Instant.parse(due)
+                                    val now = Instant.now()
+                                    val isOverdue = instant.isBefore(now)
+                                    val formatted = instant.atZone(ZoneId.systemDefault())
+                                        .format(DateTimeFormatter.ofPattern("MMM dd"))
+                                    Pair(formatted, isOverdue)
+                                } catch (e: Exception) {
+                                    null
+                                }
+                            }
+
+                            parseResult?.let { (text, isOverdue) ->
+                                Text(
+                                    text = text,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isOverdue) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+
                         task.tags.take(3).forEach { tag ->
                              Text(
                                 text = "#$tag",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+
+                        if (task.isWaiting) {
+                            Text(
+                                text = "WAITING",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary
+                            )
+                        }
+
+                        task.recur?.let { recur ->
+                            Text(
+                                text = "↻ $recur",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.secondary
                             )
                         }
                         

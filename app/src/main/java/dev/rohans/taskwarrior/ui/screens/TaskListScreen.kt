@@ -62,6 +62,7 @@ fun TaskListScreen(
 ) {
     val tasks by viewModel.tasks.collectAsState()
     val filter by viewModel.filter.collectAsState()
+    val sortField by viewModel.sortField.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val availableProjects by viewModel.availableProjects.collectAsState()
     val availableTags by viewModel.availableTags.collectAsState()
@@ -244,7 +245,9 @@ fun TaskListScreen(
                             currentFilter = filter,
                             availableProjects = availableProjects,
                             availableTags = availableTags,
-                            onFilterChange = { newFilter -> viewModel.setFilter(newFilter) }
+                            onFilterChange = { newFilter -> viewModel.setFilter(newFilter) },
+                            currentSort = sortField,
+                            onSortChange = { viewModel.setSortField(it) }
                         )
                     }
 

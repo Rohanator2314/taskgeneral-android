@@ -17,6 +17,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dev.rohans.taskwarrior.navigation.Route
+import dev.rohans.taskwarrior.ui.screens.AppSettingsScreen
 import dev.rohans.taskwarrior.ui.screens.SyncSettingsScreen
 import dev.rohans.taskwarrior.ui.screens.TaskEditScreen
 import dev.rohans.taskwarrior.ui.screens.TaskListScreen
@@ -72,6 +73,10 @@ fun TaskGeneralApp() {
         
         composable(Route.SyncSettings.route) {
             SyncSettingsScreen(navController, viewModel)
+        }
+        
+        composable(Route.AppSettings.route) {
+            AppSettingsScreen(navController, viewModel)
         }
     }
 }

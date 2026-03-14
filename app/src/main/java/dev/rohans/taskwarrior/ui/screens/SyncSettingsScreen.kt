@@ -33,6 +33,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import dev.rohans.taskwarrior.viewmodel.TaskViewModel
+import dev.rohans.taskwarrior.navigation.Route
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -225,6 +226,20 @@ fun SyncSettingsScreen(
                         MaterialTheme.colorScheme.primary
                 )
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "App Settings",
+                style = MaterialTheme.typography.titleMedium
+            )
+            OutlinedButton(
+                shape = RectangleShape,
+                onClick = { navController.navigate(Route.AppSettings.route) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Open App Settings")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
 
             Spacer(modifier = Modifier.height(32.dp))
 

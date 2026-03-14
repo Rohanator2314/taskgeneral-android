@@ -10,7 +10,14 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.*
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -31,6 +38,16 @@ fun TaskEditScreen(
     var currentTagInput by remember { mutableStateOf("") }
     var priority by remember { mutableStateOf("") }
     var isPriorityExpanded by remember { mutableStateOf(false) }
+
+    var dueDate by remember { mutableStateOf("") }
+    var waitDate by remember { mutableStateOf("") }
+    var recurrence by remember { mutableStateOf("") }
+    var isRecurrenceExpanded by remember { mutableStateOf(false) }
+    var showDueDatePicker by remember { mutableStateOf(false) }
+    var showWaitDatePicker by remember { mutableStateOf(false) }
+
+    var isActive by remember { mutableStateOf(false) }
+    var isNext by remember { mutableStateOf(false) }
     
     var isLoading by remember { mutableStateOf(false) }
     val isNewTask = uuid == null || uuid == "new"
@@ -44,6 +61,11 @@ fun TaskEditScreen(
                     project = task.project ?: ""
                     tags = task.tags
                     priority = task.priority ?: ""
+                    dueDate = task.due ?: ""
+                    waitDate = task.wait ?: ""
+                    recurrence = task.recur ?: ""
+                    isActive = task.isActive
+                    isNext = task.tags.contains("next")
                 }
                 isLoading = false
             }
@@ -87,14 +109,14 @@ fun TaskEditScreen(
                                 project = if (project.isBlank()) null else project,
                                 tags = tags,
                                 priority = priority,
-                                due = null,
-                                wait = null,
-                                recur = null
+                                due = if (dueDate.isBlank()) null else dueDate,
+                                wait = if (waitDate.isBlank()) null else waitDate,
+                                recur = if (recurrence.isBlank()) null else recurrence
                             )
 
                             if (isNewTask) {
                                 viewModel.createTask(description) { newTask ->
-                                    if (project.isNotBlank() || tags.isNotEmpty() || priority.isNotBlank()) {
+                                    if (project.isNotBlank() || tags.isNotEmpty() || priority.isNotBlank() || dueDate.isNotBlank() || waitDate.isNotBlank() || recurrence.isNotBlank()) {
                                         viewModel.updateTask(newTask.uuid, updates) {
                                             navController.popBackStack()
                                         }
@@ -184,6 +206,121 @@ fun TaskEditScreen(
                     }
                 }
 
+                if (showDueDatePicker) {
+                    val datePickerState = rememberDatePickerState()
+                    DatePickerDialog(
+                        onDismissRequest = { showDueDatePicker = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                datePickerState.selectedDateMillis?.let { millis ->
+                                    dueDate = millisToRfc3339(millis)
+                                }
+                                showDueDatePicker = false
+                            }) { Text("OK") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showDueDatePicker = false }) { Text("Cancel") }
+                        }
+                    ) {
+                        DatePicker(state = datePickerState)
+                    }
+                }
+                OutlinedTextField(
+                    value = if (dueDate.isBlank()) "Not set" else formatRfc3339ForDisplay(dueDate),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Due Date") },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        Row {
+                            if (dueDate.isNotBlank()) {
+                                IconButton(onClick = { dueDate = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear due date")
+                                }
+                            }
+                            IconButton(onClick = { showDueDatePicker = true }) {
+                                Icon(Icons.Default.DateRange, contentDescription = "Pick due date")
+                            }
+                        }
+                    }
+                )
+
+                if (showWaitDatePicker) {
+                    val datePickerState = rememberDatePickerState()
+                    DatePickerDialog(
+                        onDismissRequest = { showWaitDatePicker = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                datePickerState.selectedDateMillis?.let { millis ->
+                                    waitDate = millisToRfc3339(millis)
+                                }
+                                showWaitDatePicker = false
+                            }) { Text("OK") }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = { showWaitDatePicker = false }) { Text("Cancel") }
+                        }
+                    ) {
+                        DatePicker(state = datePickerState)
+                    }
+                }
+                OutlinedTextField(
+                    value = if (waitDate.isBlank()) "Not set" else formatRfc3339ForDisplay(waitDate),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Wait Until") },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        Row {
+                            if (waitDate.isNotBlank()) {
+                                IconButton(onClick = { waitDate = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear wait date")
+                                }
+                            }
+                            IconButton(onClick = { showWaitDatePicker = true }) {
+                                Icon(Icons.Default.DateRange, contentDescription = "Pick wait date")
+                            }
+                        }
+                    }
+                )
+
+                ExposedDropdownMenuBox(
+                    expanded = isRecurrenceExpanded,
+                    onExpandedChange = { isRecurrenceExpanded = it },
+                ) {
+                    OutlinedTextField(
+                        value = when(recurrence) {
+                            "daily" -> "Daily"
+                            "weekly" -> "Weekly"
+                            "biweekly" -> "Biweekly"
+                            "monthly" -> "Monthly"
+                            "quarterly" -> "Quarterly"
+                            "yearly" -> "Yearly"
+                            else -> "None"
+                        },
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Recurrence") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isRecurrenceExpanded) },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = isRecurrenceExpanded,
+                        onDismissRequest = { isRecurrenceExpanded = false }
+                    ) {
+                        listOf("" to "None", "daily" to "Daily", "weekly" to "Weekly", "biweekly" to "Biweekly", "monthly" to "Monthly", "quarterly" to "Quarterly", "yearly" to "Yearly").forEach { (key, label) ->
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    recurrence = key
+                                    isRecurrenceExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = currentTagInput,
@@ -223,7 +360,65 @@ fun TaskEditScreen(
                         }
                     }
                 }
+
+                if (!isNewTask) {
+                    HorizontalDivider()
+                    Text(
+                        text = "Task Actions",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Button(
+                            shape = RectangleShape,
+                            onClick = {
+                                if (isActive) {
+                                    viewModel.stopTask(uuid!!)
+                                    isActive = false
+                                } else {
+                                    viewModel.startTask(uuid!!)
+                                    isActive = true
+                                }
+                            },
+                            colors = if (isActive) ButtonDefaults.buttonColors() else ButtonDefaults.outlinedButtonColors().let {
+                                ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        ) {
+                            Text(if (isActive) "Stop Task" else "Start Task")
+                        }
+                        FilterChip(
+                            shape = RectangleShape,
+                            selected = isNext,
+                            onClick = {
+                                viewModel.toggleNext(uuid!!)
+                                isNext = !isNext
+                            },
+                            label = { Text("Next") }
+                        )
+                    }
+                }
             }
         }
     }
+}
+
+private fun formatRfc3339ForDisplay(rfc3339: String): String {
+    return try {
+        val instant = java.time.Instant.parse(rfc3339)
+        instant.atZone(java.time.ZoneId.systemDefault())
+            .format(java.time.format.DateTimeFormatter.ofPattern("MMM dd, yyyy"))
+    } catch (e: Exception) {
+        rfc3339
+    }
+}
+
+private fun millisToRfc3339(millis: Long): String {
+    return java.time.Instant.ofEpochMilli(millis)
+        .atZone(java.time.ZoneOffset.UTC)
+        .format(java.time.format.DateTimeFormatter.ISO_INSTANT)
 }

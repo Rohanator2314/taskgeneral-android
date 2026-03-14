@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import uniffi.taskgeneral_core.SortField
 import uniffi.taskgeneral_core.TaskFilter
 
 @Composable
@@ -32,6 +33,8 @@ fun FilterRow(
     availableProjects: List<String>,
     availableTags: List<String>,
     onFilterChange: (TaskFilter) -> Unit,
+    currentSort: SortField,
+    onSortChange: (SortField) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
@@ -42,27 +45,15 @@ fun FilterRow(
             .padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        val statuses = listOf("pending", "completed", "waiting", "deleted")
-
-        FilterChip(
-            shape = RectangleShape,
-            selected = currentFilter.status == null && currentFilter.project == null && currentFilter.tag == null,
-            onClick = {
-                onFilterChange(TaskFilter(null, null, null, null))
-            },
-            label = { Text("All") }
+        // Status dropdown — shows "All" when null, otherwise shows selected status
+        FilterDropdown(
+            label = "Status",
+            selectedItem = currentFilter.status,
+            items = listOf("pending", "completed", "waiting", "deleted"),
+            onItemSelected = { selected ->
+                onFilterChange(TaskFilter(selected, currentFilter.project, currentFilter.tag, null))
+            }
         )
-
-        statuses.forEach { status ->
-            FilterChip(
-            shape = RectangleShape,
-                selected = currentFilter.status == status,
-                onClick = {
-                    onFilterChange(currentFilter.copy(status = status))
-                },
-                label = { Text(status.replaceFirstChar { it.uppercase() }) }
-            )
-        }
 
         FilterDropdown(
             label = "Project",
@@ -77,6 +68,58 @@ fun FilterRow(
             items = availableTags,
             onItemSelected = { onFilterChange(currentFilter.copy(tag = it)) }
         )
+
+        SortDropdown(
+            currentSort = currentSort,
+            onSortChange = onSortChange
+        )
+    }
+}
+
+@Composable
+private fun SortDropdown(
+    currentSort: SortField,
+    onSortChange: (SortField) -> Unit
+) {
+    val sortOptions = listOf(
+        SortField.URGENCY to "Urgency",
+        SortField.DUE_DATE to "Due Date",
+        SortField.PRIORITY to "Priority",
+        SortField.ENTRY_DATE to "Newest",
+        SortField.MODIFIED to "Modified",
+        SortField.DESCRIPTION to "A-Z"
+    )
+    val currentLabel = sortOptions.firstOrNull { it.first == currentSort }?.second ?: "Sort"
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        FilterChip(
+            shape = RectangleShape,
+            selected = currentSort != SortField.URGENCY,
+            onClick = { expanded = true },
+            label = { Text("Sort: $currentLabel") },
+            trailingIcon = {
+                Icon(
+                    imageVector = Icons.Default.ArrowDropDown,
+                    contentDescription = "Show sort options",
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            sortOptions.forEach { (field, label) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        onSortChange(field)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }
 
