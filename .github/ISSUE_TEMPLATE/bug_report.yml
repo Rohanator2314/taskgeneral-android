@@ -1,0 +1,71 @@
+name: Bug report
+description: Something isn't working correctly
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Fill in as much detail as you can — the more context, the faster we can fix it.
+
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Found in the app's About screen or the GitHub release tag
+      placeholder: "1.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: android-version
+    attributes:
+      label: Android version
+      placeholder: "Android 14 (API 34)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to '...'
+        2. Tap on '...'
+        3. See error
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which area of the app?
+      options:
+        - Task list / filtering / sorting
+        - Task create / edit
+        - Sync
+        - App settings
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or crash output (if available)
+      description: Paste logcat output or a crash stack trace
+      render: text

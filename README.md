@@ -8,10 +8,14 @@ TaskGeneral is an offline-first task management app that syncs with self-hosted 
 
 **Key Features:**
 - ✅ Full task CRUD (create, read, update, delete, complete)
-- 🔍 Filter by status, project, and tags
-- 🔄 Sync with taskchampion-sync-server
+- 📅 Due dates, wait dates, and recurrence fields
+- ⚡ Urgency scoring — Taskwarrior-compatible formula with automatic sort
+- ▶️ Start / stop tasks with active-task tracking
+- 🔍 Filter by status (pending, active, waiting, completed), project, and tags
+- 🔃 Sort by urgency, due date, priority, creation date, or description
+- 🔄 Sync with taskchampion-sync-server (manual and automatic background sync)
 - 📱 Offline-first with local SQLite storage
-- 🎨 Material Design 3 UI with dynamic colors
+- ⚙️ App settings — configure default sort order and urgency weights
 - 🔐 Encrypted sync settings (EncryptedSharedPreferences)
 
 ## Architecture
@@ -43,7 +47,7 @@ rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-and
 ### 1. Clone the repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/Rohanator2314/taskwarrior-android.git
 cd taskwarrior-android
 ```
 
@@ -171,11 +175,7 @@ See [LICENSE](LICENSE) for details.
 
 ## Contributing
 
-Contributions welcome! Please:
-- Follow existing code style (rustfmt for Rust, ktlint for Kotlin)
-- Run all tests before submitting PR (`cargo test`, `./gradlew test`)
-- Update tests for new features
-- Reference any related GitHub issues
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, code style, and the pull request process.
 
 ## Architecture Documentation
 
