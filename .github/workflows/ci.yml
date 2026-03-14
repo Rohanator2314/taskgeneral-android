@@ -2,37 +2,39 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ master ]
 
 jobs:
   rust-tests:
     name: Rust Tests
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+      with:
+        submodules: recursive
+
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
       with:
         components: clippy, rustfmt
-    
+
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
       with:
         workspaces: rust/taskgeneral-core
-    
+
     - name: Run cargo fmt check
       working-directory: rust/taskgeneral-core
       run: cargo fmt --check
-    
+
     - name: Run cargo clippy
       working-directory: rust/taskgeneral-core
       run: cargo clippy -- -D warnings
-    
+
     - name: Run cargo test
       working-directory: rust/taskgeneral-core
       run: cargo test --verbose
@@ -40,45 +42,47 @@ jobs:
   android-build:
     name: Android Build
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+      with:
+        submodules: recursive
+
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
         cache: 'gradle'
-    
+
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
-    
+
     - name: Install Android NDK
       uses: nttld/setup-ndk@v1
       with:
         ndk-version: r26d
         add-to-path: true
-    
+
     - name: Install Rust Android targets
       run: |
         rustup target add aarch64-linux-android
         rustup target add armv7-linux-androideabi
         rustup target add x86_64-linux-android
         rustup target add i686-linux-android
-    
+
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
       with:
         workspaces: rust/taskgeneral-core
-    
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-    
+
     - name: Build debug APK
       run: ./gradlew assembleDebug --stacktrace
-    
+
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
@@ -90,35 +94,37 @@ jobs:
     name: Android Unit Tests
     runs-on: ubuntu-latest
     needs: android-build
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+      with:
+        submodules: recursive
+
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         distribution: 'temurin'
         java-version: '17'
         cache: 'gradle'
-    
+
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
-    
+
     - name: Install Rust host target
       run: rustup target add x86_64-unknown-linux-gnu
-    
+
     - name: Cache Rust dependencies
       uses: Swatinem/rust-cache@v2
       with:
         workspaces: rust/taskgeneral-core
-    
+
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-    
+
     - name: Run Android unit tests
       run: ./gradlew test --stacktrace
-    
+
     - name: Upload test results
       if: always()
       uses: actions/upload-artifact@v4
