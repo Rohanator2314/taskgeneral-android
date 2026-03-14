@@ -30,6 +30,12 @@ pub enum TaskError {
     #[error("Sync not configured")]
     SyncNotConfigured,
 
+    #[error("Invalid date: {0}")]
+    InvalidDate(String),
+
+    #[error("Invalid recurrence: {0}")]
+    InvalidRecurrence(String),
+
     #[error("Invalid sync server URL: {0}")]
     InvalidSyncUrl(String),
 
@@ -52,6 +58,12 @@ impl From<taskchampion::Error> for TaskError {
 impl From<uuid::Error> for TaskError {
     fn from(err: uuid::Error) -> Self {
         TaskError::InvalidUuid(err.to_string())
+    }
+}
+
+impl From<chrono::ParseError> for TaskError {
+    fn from(err: chrono::ParseError) -> Self {
+        TaskError::InvalidDate(err.to_string())
     }
 }
 
