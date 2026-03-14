@@ -72,6 +72,11 @@ class TaskViewModel(
     private var _tasksLoaded = false
 
     init {
+        val appSettings = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
+        val savedStatus = appSettings.getString("app_settings_default_filter", null)
+        _filter.value = TaskFilter(savedStatus, null, null, null)
+        val savedSortName = appSettings.getString("app_settings_default_sort", SortField.URGENCY.name) ?: SortField.URGENCY.name
+        _sortField.value = try { SortField.valueOf(savedSortName) } catch (e: Exception) { SortField.URGENCY }
         loadSyncConfig()
         loadTasks()
     }
