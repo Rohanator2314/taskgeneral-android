@@ -1,27 +1,56 @@
 
-## Task 10: Task Edit Screen Refinement
-- **UI Components**:
-  - Used `FlowRow` for tags display, which wraps nicely.
-  - Used `ExposedDropdownMenuBox` for Priority selection, providing a standard M3 dropdown experience.
-  - Implemented `InputChip` for tags, allowing easy removal.
-- **Input Handling**:
-  - Tags are added via `OutlinedTextField` by detecting comma or newline.
-  - Form validation for description ensures no empty tasks are created.
-- **Navigation**:
-  - Cancel button simply pops back stack.
-  - Save button performs `createTask` -> `updateTask` sequence for new tasks to handle all fields.
-- **TaskEditScreen**: Enabled tag removal by adding `Modifier.clickable` to the `InputChip` trailing icon, as the chip's `onClick` was reserved for potential future use or non-removal actions.
+## Task 14: Sync Error Handling
+- **ViewModel Pattern**: 
+  - Expose `syncStatus` as `StateFlow<String?>`.
+  - On success: `_syncStatus.value = "Sync successful"`.
+  - On failure: `_syncStatus.value = result.message` (where `result.message` contains "Sync failed: ...").
+  - On exception: `_syncStatus.value = "Sync error: ${e.message}"`.
+- **UI Feedback**:
+  - `SyncSettingsScreen` observes `syncStatus`.
+  - Color logic: Red if status contains "failed" or "error", Primary color otherwise.
+  - This simple text-based feedback is sufficient for settings screens without complex dialogs.
+- **Refinement**:
+  - Rust `SyncResult` messages already include prefixes like "Sync failed: ". 
+  - ViewModel should avoid adding double prefixes (e.g., "Sync failed: Sync failed: ...").
+  - Direct assignment of the error message provides the cleanest UI string.
 
-## Task 11: Sync Settings Screen Implementation
-- **UI Components**:
-  - Implemented `SyncSettingsScreen` using Material 3 components.
-  - Replaced `IconButton` with `TextButton` for password visibility toggle to avoid dependency issues with missing icons.
-- **Data Persistence**:
-  - Used `SharedPreferences` in `TaskViewModel` to persist sync configuration (Server URL, Encryption Secret, Client ID) because `TaskRepository` (Rust core) does not expose a way to read back the configuration once set.
-  - Auto-generated Client ID (UUID) on first load if missing.
-- **ViewModel Logic**:
-  - Implemented `saveSyncConfig` in ViewModel which updates local state, saves to Prefs, and calls `repository.configureSync`.
-  - Implemented `sync` in ViewModel which calls `repository.sync` and updates status.
-- **Refactoring**:
-  - Updated `TaskViewModelFactory` to inject `SharedPreferences`.
-  - Updated `TaskListScreen` and `TaskEditScreen` to pass the required dependencies to the ViewModel factory.
+## Background Sync Implementation
+
+### Implementation Approach
+- Used Android WorkManager for reliable background task scheduling
+- Created SyncWorker in `app/src/main/java/dev/rohans/taskwarrior/work/SyncWorker.kt`
+- Configured periodic sync every 15 minutes (WorkManager minimum)
+- Required network connectivity constraint for sync operations
+
+### Key Components Added
+1. **SyncWorker**: CoroutineWorker that performs background sync
+   - Retrieves encrypted sync config from SharedPreferences
+   - Initializes TaskRepository with stored credentials
+   - Performs sync via repository.sync()
+   - Returns Result.retry() on failures for automatic retry
+
+2. **MainApplication**: Schedules background sync on app startup
+   - Enqueues periodic work with KEEP policy (doesn't replace existing)
+   - Sets network connectivity constraint
+   - Uses unique work name to prevent duplicate scheduling
+
+3. **TaskViewModel**: Triggers sync scheduling when config is saved
+   - Added Context parameter to ViewModel and Factory
+   - Calls scheduleSyncIfConfigured() after saving sync config
+   - Uses REPLACE policy to update schedule with new config
+
+### Configuration
+- WorkManager dependency: `androidx.work:work-runtime-ktx:2.9.0`
+- Minimum sync interval: 15 minutes (WorkManager limitation)
+- Network constraint: CONNECTED (any network type)
+- Retry policy: Automatic retry on failure (WorkManager default)
+
+### Manual Sync Preservation
+- Existing sync() method in TaskViewModel unchanged
+- SyncSettingsScreen "Sync Now" button still functional
+- Background sync and manual sync use same TaskRepository.sync() method
+
+### Testing Results
+- ./gradlew lintDebug: SUCCESSFUL
+- ./gradlew test: SUCCESSFUL (all unit tests pass)
+- No compilation errors or warnings introduced

@@ -1,5 +1,6 @@
 use crate::error::{Result, TaskError};
-use crate::models::{SyncResult, TaskFilter, TaskInfo, TaskUpdate};
+use crate::models::{SortField, SyncResult, TaskFilter, TaskInfo, TaskUpdate};
+use chrono::{DateTime, Utc};
 use std::path::PathBuf;
 use taskchampion::{
     server::ServerConfig,
@@ -130,6 +131,94 @@ impl TaskManager {
         })
     }
 
+    pub fn list_tasks_sorted(&mut self, filter: TaskFilter, sort_by: SortField) -> Result<Vec<TaskInfo>> {
+        self.runtime.block_on(async {
+            let uuids = self.replica.all_task_uuids().await?;
+            let mut tasks = Vec::new();
+
+            for uuid in uuids {
+                if let Some(task) = self.replica.get_task(uuid).await? {
+                    let task_info = task_to_info(&task);
+
+                    // Apply waiting task auto-hide: if no status filter, exclude waiting tasks
+                    let status_filter_set = filter.status.is_some();
+                    if !status_filter_set && task_info.is_waiting {
+                        continue;
+                    }
+
+                    // Apply filters (same logic as list_tasks_filtered)
+                    if let Some(ref status_filter) = filter.status {
+                        if task_info.status != *status_filter {
+                            continue;
+                        }
+                    }
+
+                    if let Some(ref project_filter) = filter.project {
+                        match &task_info.project {
+                            Some(project) if project == project_filter => {},
+                            _ => continue,
+                        }
+                    }
+
+                    if let Some(ref tag_filter) = filter.tag {
+                        if !task_info.tags.contains(tag_filter) {
+                            continue;
+                        }
+                    }
+
+                    tasks.push(task_info);
+                }
+            }
+
+            // Sort based on sort_by field
+            match sort_by {
+                SortField::Urgency => {
+                    tasks.sort_by(|a, b| {
+                        b.urgency.partial_cmp(&a.urgency).unwrap_or(std::cmp::Ordering::Equal)
+                    });
+                }
+                SortField::DueDate => {
+                    tasks.sort_by(|a, b| {
+                        match (&a.due, &b.due) {
+                            (Some(da), Some(db)) => da.cmp(db),
+                            (Some(_), None) => std::cmp::Ordering::Less,    // tasks with due date first
+                            (None, Some(_)) => std::cmp::Ordering::Greater,  // no-due-date last
+                            (None, None) => std::cmp::Ordering::Equal,
+                        }
+                    });
+                }
+                SortField::Priority => {
+                    let priority_rank = |p: &Option<String>| match p.as_deref() {
+                        Some("H") => 3,
+                        Some("M") => 2,
+                        Some("L") => 1,
+                        _ => 0,
+                    };
+                    tasks.sort_by(|a, b| {
+                        priority_rank(&b.priority).cmp(&priority_rank(&a.priority))
+                    });
+                }
+                SortField::EntryDate => {
+                    tasks.sort_by(|a, b| {
+                        b.entry.cmp(&a.entry)  // RFC3339 strings sort lexicographically = chronologically
+                    });
+                }
+                SortField::Modified => {
+                    tasks.sort_by(|a, b| {
+                        b.modified.cmp(&a.modified)
+                    });
+                }
+                SortField::Description => {
+                    tasks.sort_by(|a, b| {
+                        a.description.cmp(&b.description)
+                    });
+                }
+            }
+
+            Ok(tasks)
+        })
+    }
+
     pub fn get_working_set(&mut self) -> Result<Vec<crate::models::WorkingSetItem>> {
         self.runtime.block_on(async {
             let working_set = self.replica.working_set().await?;
@@ -171,6 +260,38 @@ impl TaskManager {
                 return Err(TaskError::InvalidPriority(format!(
                     "Priority must be H, M, L, or empty. Got: {}",
                     priority
+                )));
+            }
+        }
+
+        // Validate due/wait dates BEFORE block_on
+        let due_to_set: Option<Option<DateTime<Utc>>> = if let Some(due_str) = &updates.due {
+            if due_str.is_empty() {
+                Some(None)
+            } else {
+                Some(Some(parse_rfc3339(due_str)?))
+            }
+        } else {
+            None
+        };
+
+        let wait_to_set: Option<Option<DateTime<Utc>>> = if let Some(wait_str) = &updates.wait {
+            if wait_str.is_empty() {
+                Some(None)
+            } else {
+                Some(Some(parse_rfc3339(wait_str)?))
+            }
+        } else {
+            None
+        };
+
+        // Validate recurrence
+        if let Some(recur_str) = &updates.recur {
+            let allowed = ["", "daily", "weekly", "biweekly", "monthly", "quarterly", "yearly"];
+            if !allowed.contains(&recur_str.as_str()) {
+                return Err(TaskError::InvalidRecurrence(format!(
+                    "Recurrence must be one of: daily, weekly, biweekly, monthly, quarterly, yearly. Got: {}",
+                    recur_str
                 )));
             }
         }
@@ -217,6 +338,22 @@ impl TaskManager {
                 }
             }
 
+            if let Some(due_opt) = due_to_set {
+                task.set_due(due_opt, &mut ops)?;
+            }
+
+            if let Some(wait_opt) = wait_to_set {
+                task.set_wait(wait_opt, &mut ops)?;
+            }
+
+            if let Some(recur_str) = updates.recur {
+                if recur_str.is_empty() {
+                    task.set_value("recur", None, &mut ops)?;
+                } else {
+                    task.set_value("recur", Some(recur_str), &mut ops)?;
+                }
+            }
+
             self.replica.commit_operations(ops).await?;
 
             Ok::<(), taskchampion::Error>(())
@@ -242,6 +379,60 @@ impl TaskManager {
 
             self.replica.commit_operations(ops).await?;
 
+            Ok::<(), taskchampion::Error>(())
+        })?;
+        
+        self.get_task(uuid_str)?
+            .ok_or_else(|| TaskError::TaskNotFound(uuid_str.to_string()))
+    }
+
+    pub fn start_task(&mut self, uuid_str: &str) -> Result<TaskInfo> {
+        let uuid = TcUuid::parse_str(uuid_str)?;
+
+        let result = self.runtime.block_on(async {
+            let task_opt = self.replica.get_task(uuid).await?;
+            Ok::<Option<Task>, taskchampion::Error>(task_opt)
+        })?;
+        
+        let mut task = result.ok_or_else(|| TaskError::TaskNotFound(uuid_str.to_string()))?;
+
+        if task.is_active() {
+            return Err(TaskError::InvalidStatus(
+                "Task is already active (already started)".to_string()
+            ));
+        }
+
+        self.runtime.block_on(async {
+            let mut ops = Operations::new();
+            task.start(&mut ops)?;
+            self.replica.commit_operations(ops).await?;
+            Ok::<(), taskchampion::Error>(())
+        })?;
+        
+        self.get_task(uuid_str)?
+            .ok_or_else(|| TaskError::TaskNotFound(uuid_str.to_string()))
+    }
+
+    pub fn stop_task(&mut self, uuid_str: &str) -> Result<TaskInfo> {
+        let uuid = TcUuid::parse_str(uuid_str)?;
+
+        let result = self.runtime.block_on(async {
+            let task_opt = self.replica.get_task(uuid).await?;
+            Ok::<Option<Task>, taskchampion::Error>(task_opt)
+        })?;
+        
+        let mut task = result.ok_or_else(|| TaskError::TaskNotFound(uuid_str.to_string()))?;
+
+        if !task.is_active() {
+            return Err(TaskError::InvalidStatus(
+                "Task is not active (not started)".to_string()
+            ));
+        }
+
+        self.runtime.block_on(async {
+            let mut ops = Operations::new();
+            task.stop(&mut ops)?;
+            self.replica.commit_operations(ops).await?;
             Ok::<(), taskchampion::Error>(())
         })?;
         
@@ -384,6 +575,71 @@ impl TaskManager {
     }
 }
 
+fn due_urgency(task: &Task) -> f64 {
+    match task.get_due() {
+        None => 0.0,
+        Some(due) => {
+            let now = chrono::Utc::now();
+            let days_overdue = (now - due).num_seconds() as f64 / 86400.0;
+            if days_overdue >= 7.0 {
+                1.0
+            } else if days_overdue >= -14.0 {
+                ((days_overdue + 14.0) * 0.8 / 21.0) + 0.2
+            } else {
+                0.2
+            }
+        }
+    }
+}
+
+fn age_urgency(task: &Task) -> f64 {
+    match task.get_entry() {
+        None => 0.0,
+        Some(entry) => {
+            let now = chrono::Utc::now();
+            let age_days = (now - entry).num_seconds() as f64 / 86400.0;
+            (age_days / 365.0).min(1.0).max(0.0)
+        }
+    }
+}
+
+fn tag_urgency(task: &Task) -> f64 {
+    let count = task.get_tags().filter(|t| !t.is_synthetic()).count();
+    match count {
+        0 => 0.0,
+        1 => 0.8,
+        2 => 0.9,
+        _ => 1.0,
+    }
+}
+
+fn parse_rfc3339(s: &str) -> Result<DateTime<Utc>> {
+    chrono::DateTime::parse_from_rfc3339(s)
+        .map(|dt| dt.with_timezone(&Utc))
+        .map_err(|e| crate::error::TaskError::InvalidDate(e.to_string()))
+}
+
+fn calculate_urgency(task: &Task) -> f64 {
+    let priority = task.get_priority();
+    let has_next = task.get_tags()
+        .filter(|t| !t.is_synthetic())
+        .any(|t| t.to_string() == "next");
+    let has_project = task.get_value("project").is_some();
+
+    let urgency = 15.0 * if has_next { 1.0 } else { 0.0 }
+        + 12.0 * due_urgency(task)
+        + 6.0 * if priority == "H" { 1.0 } else { 0.0 }
+        + 4.0 * if task.is_active() { 1.0 } else { 0.0 }
+        + 3.9 * if priority == "M" { 1.0 } else { 0.0 }
+        + 2.0 * age_urgency(task)
+        + 1.8 * if priority == "L" { 1.0 } else { 0.0 }
+        + 1.0 * tag_urgency(task)
+        + 1.0 * if has_project { 1.0 } else { 0.0 }
+        + (-3.0) * if task.is_waiting() { 1.0 } else { 0.0 };
+
+    urgency
+}
+
 fn task_to_info(task: &Task) -> TaskInfo {
     let tags: Vec<String> = task.get_tags()
         .filter(|t| !t.is_synthetic())
@@ -402,6 +658,13 @@ fn task_to_info(task: &Task) -> TaskInfo {
         },
         entry: task.get_entry().map(|dt| dt.to_rfc3339()),
         modified: task.get_modified().map(|dt| dt.to_rfc3339()),
+        due: task.get_due().map(|dt| dt.to_rfc3339()),
+        wait: task.get_wait().map(|dt| dt.to_rfc3339()),
+        start: task.get_value("start").map(|s| s.to_string()),
+        recur: task.get_value("recur").map(|s| s.to_string()),
+        urgency: calculate_urgency(task),
+        is_active: task.is_active(),
+        is_waiting: task.is_waiting(),
     }
 }
 
@@ -771,6 +1034,7 @@ mod tests {
             status: Some("pending".to_string()),
             project: Some("projectA".to_string()),
             tag: Some("work".to_string()),
+            sort_by: None,
         };
         let filtered = manager.list_tasks_filtered(filter).unwrap();
         
