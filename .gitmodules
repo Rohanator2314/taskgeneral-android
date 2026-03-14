@@ -1,0 +1,3 @@
+[submodule "rust/taskgeneral-core"]
+	path = rust/taskgeneral-core
+	url = https://github.com/Rohanator2314/taskgeneral-core.git
