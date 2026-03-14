@@ -1330,4 +1330,322 @@ mod tests {
         eprintln!("  VM should now run 'task sync' to receive task '{}'", new_uuid);
         eprintln!("✓ Cross-device sync test PASSED");
     }
+
+    #[test]
+    fn test_set_due_date() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Task with due date").unwrap();
+        
+        let updates = TaskUpdate {
+            due: Some("2026-12-31T00:00:00Z".to_string()),
+            ..Default::default()
+        };
+        let updated = manager.update_task(&task.uuid, updates).unwrap();
+        
+        assert!(updated.due.is_some());
+        let due_str = updated.due.as_ref().unwrap();
+        assert!(due_str.starts_with("2026-12-31"));
+    }
+
+    #[test]
+    fn test_clear_due_date() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Task with due date").unwrap();
+        
+        let updates = TaskUpdate {
+            due: Some("2026-12-31T00:00:00Z".to_string()),
+            ..Default::default()
+        };
+        manager.update_task(&task.uuid, updates).unwrap();
+        
+        let updates = TaskUpdate {
+            due: Some("".to_string()),
+            ..Default::default()
+        };
+        let updated = manager.update_task(&task.uuid, updates).unwrap();
+        
+        assert!(updated.due.is_none());
+    }
+
+    #[test]
+    fn test_invalid_date() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Task").unwrap();
+        
+        let updates = TaskUpdate {
+            due: Some("not-a-date".to_string()),
+            ..Default::default()
+        };
+        let result = manager.update_task(&task.uuid, updates);
+        
+        assert!(result.is_err());
+        match result {
+            Err(TaskError::InvalidDate(_)) => {},
+            _ => panic!("Expected InvalidDate error"),
+        }
+    }
+
+    #[test]
+    fn test_set_wait_date() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Task with wait date").unwrap();
+        
+        let updates = TaskUpdate {
+            wait: Some("2026-06-01T00:00:00Z".to_string()),
+            ..Default::default()
+        };
+        let updated = manager.update_task(&task.uuid, updates).unwrap();
+        
+        assert!(updated.wait.is_some());
+        assert!(updated.is_waiting);
+    }
+
+    #[test]
+    fn test_set_recurrence() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Recurring task").unwrap();
+        
+        let updates = TaskUpdate {
+            recur: Some("weekly".to_string()),
+            ..Default::default()
+        };
+        let updated = manager.update_task(&task.uuid, updates).unwrap();
+        
+        assert_eq!(updated.recur, Some("weekly".to_string()));
+    }
+
+    #[test]
+    fn test_clear_recurrence() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Recurring task").unwrap();
+        
+        let updates = TaskUpdate {
+            recur: Some("monthly".to_string()),
+            ..Default::default()
+        };
+        manager.update_task(&task.uuid, updates).unwrap();
+        
+        let updates = TaskUpdate {
+            recur: Some("".to_string()),
+            ..Default::default()
+        };
+        let updated = manager.update_task(&task.uuid, updates).unwrap();
+        
+        assert!(updated.recur.is_none());
+    }
+
+    #[test]
+    fn test_invalid_recurrence() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Task").unwrap();
+        
+        let updates = TaskUpdate {
+            recur: Some("invalid_value".to_string()),
+            ..Default::default()
+        };
+        let result = manager.update_task(&task.uuid, updates);
+        
+        assert!(result.is_err());
+        match result {
+            Err(TaskError::InvalidRecurrence(_)) => {},
+            _ => panic!("Expected InvalidRecurrence error"),
+        }
+    }
+
+    #[test]
+    fn test_start_task() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Task to start").unwrap();
+        
+        let started = manager.start_task(&task.uuid).unwrap();
+        
+        assert!(started.is_active);
+    }
+
+    #[test]
+    fn test_stop_task() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Task to start and stop").unwrap();
+        
+        manager.start_task(&task.uuid).unwrap();
+        let stopped = manager.stop_task(&task.uuid).unwrap();
+        
+        assert!(!stopped.is_active);
+    }
+
+    #[test]
+    fn test_start_already_active() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Task").unwrap();
+        
+        manager.start_task(&task.uuid).unwrap();
+        let result = manager.start_task(&task.uuid);
+        
+        assert!(result.is_err());
+        match result {
+            Err(TaskError::InvalidStatus(_)) => {},
+            _ => panic!("Expected InvalidStatus error"),
+        }
+    }
+
+    #[test]
+    fn test_stop_not_active() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Task").unwrap();
+        
+        let result = manager.stop_task(&task.uuid);
+        
+        assert!(result.is_err());
+        match result {
+            Err(TaskError::InvalidStatus(_)) => {},
+            _ => panic!("Expected InvalidStatus error"),
+        }
+    }
+
+    #[test]
+    fn test_urgency_bare_task() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Bare task").unwrap();
+        
+        assert!(task.urgency >= 0.0);
+    }
+
+    #[test]
+    fn test_urgency_high_priority() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("High priority task").unwrap();
+        
+        let updates = TaskUpdate {
+            priority: Some("H".to_string()),
+            ..Default::default()
+        };
+        let updated = manager.update_task(&task.uuid, updates).unwrap();
+        
+        assert!(updated.urgency >= 6.0);
+    }
+
+    #[test]
+    fn test_urgency_active_task() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Task to start").unwrap();
+        
+        let started = manager.start_task(&task.uuid).unwrap();
+        
+        assert!(started.urgency >= 4.0);
+    }
+
+    #[test]
+    fn test_urgency_overdue_task() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Overdue task").unwrap();
+        
+        let updates = TaskUpdate {
+            due: Some("2020-01-01T00:00:00Z".to_string()),
+            ..Default::default()
+        };
+        let updated = manager.update_task(&task.uuid, updates).unwrap();
+        
+        assert!(updated.urgency >= 12.0);
+    }
+
+    #[test]
+    fn test_urgency_waiting_negative() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task = manager.create_task("Waiting task").unwrap();
+        
+        let updates = TaskUpdate {
+            wait: Some("2099-01-01T00:00:00Z".to_string()),
+            ..Default::default()
+        };
+        let updated = manager.update_task(&task.uuid, updates).unwrap();
+        
+        assert!(updated.urgency <= 0.0);
+    }
+
+    #[test]
+    fn test_sort_by_urgency() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let task_h = manager.create_task("High priority task").unwrap();
+        let updates = TaskUpdate {
+            priority: Some("H".to_string()),
+            ..Default::default()
+        };
+        manager.update_task(&task_h.uuid, updates).unwrap();
+        
+        let task_l = manager.create_task("Low priority task").unwrap();
+        let updates = TaskUpdate {
+            priority: Some("L".to_string()),
+            ..Default::default()
+        };
+        manager.update_task(&task_l.uuid, updates).unwrap();
+        
+        manager.create_task("Bare task").unwrap();
+        
+        let sorted = manager.list_tasks_sorted(TaskFilter::default(), SortField::Urgency).unwrap();
+        
+        assert_eq!(sorted.len(), 3);
+        assert_eq!(sorted[0].uuid, task_h.uuid);
+        assert!(sorted[0].urgency > sorted[1].urgency);
+        assert!(sorted[1].urgency > sorted[2].urgency);
+    }
+
+    #[test]
+    fn test_sort_by_description() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        manager.create_task("Charlie").unwrap();
+        manager.create_task("Alice").unwrap();
+        manager.create_task("Bob").unwrap();
+        
+        let sorted = manager.list_tasks_sorted(TaskFilter::default(), SortField::Description).unwrap();
+        
+        assert_eq!(sorted.len(), 3);
+        assert_eq!(sorted[0].description, "Alice");
+        assert_eq!(sorted[1].description, "Bob");
+        assert_eq!(sorted[2].description, "Charlie");
+    }
+
+    #[test]
+    fn test_waiting_tasks_auto_hidden() {
+        let (mut manager, _temp) = create_test_manager();
+        
+        let waiting_task = manager.create_task("Waiting task").unwrap();
+        let updates = TaskUpdate {
+            wait: Some("2099-01-01T00:00:00Z".to_string()),
+            ..Default::default()
+        };
+        let updated = manager.update_task(&waiting_task.uuid, updates).unwrap();
+        assert!(updated.is_waiting);
+        
+        manager.create_task("Normal task").unwrap();
+        
+        let default_list = manager.list_tasks_sorted(TaskFilter::default(), SortField::Urgency).unwrap();
+        
+        assert_eq!(default_list.len(), 1);
+        assert_eq!(default_list[0].description, "Normal task");
+        
+        let all_tasks = manager.list_tasks().unwrap();
+        assert_eq!(all_tasks.len(), 2);
+        
+        let waiting_in_all = all_tasks.iter().find(|t| t.uuid == waiting_task.uuid);
+        assert!(waiting_in_all.is_some());
+        assert!(waiting_in_all.unwrap().is_waiting);
+    }
 }
