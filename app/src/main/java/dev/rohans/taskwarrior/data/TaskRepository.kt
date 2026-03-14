@@ -59,4 +59,16 @@ class TaskRepository(dataDir: File) {
     suspend fun clearLocalData(): Unit = withContext(Dispatchers.IO) {
         taskManager.clearLocalData()
     }
+
+    suspend fun startTask(uuid: String): TaskInfo = withContext(Dispatchers.IO) {
+        taskManager.startTask(uuid)
+    }
+
+    suspend fun stopTask(uuid: String): TaskInfo = withContext(Dispatchers.IO) {
+        taskManager.stopTask(uuid)
+    }
+
+    suspend fun listTasksSorted(filter: TaskFilter, sortBy: SortField): List<TaskInfo> = withContext(Dispatchers.IO) {
+        taskManager.listTasksSorted(filter, sortBy)
+    }
 }

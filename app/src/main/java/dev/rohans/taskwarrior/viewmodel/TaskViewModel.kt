@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import uniffi.taskgeneral_core.SortField
 import uniffi.taskgeneral_core.SyncResult
 import uniffi.taskgeneral_core.TaskFilter
 import uniffi.taskgeneral_core.TaskInfo
@@ -35,8 +36,11 @@ class TaskViewModel(
     private val _availableTags = MutableStateFlow<List<String>>(emptyList())
     val availableTags: StateFlow<List<String>> = _availableTags.asStateFlow()
     
-    private val _filter = MutableStateFlow(TaskFilter(null, null, null))
+    private val _filter = MutableStateFlow(TaskFilter(null, null, null, null))
     val filter: StateFlow<TaskFilter> = _filter.asStateFlow()
+
+    private val _sortField = MutableStateFlow(SortField.URGENCY)
+    val sortField: StateFlow<SortField> = _sortField.asStateFlow()
     
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -240,17 +244,28 @@ class TaskViewModel(
         viewModelScope.launch {
             _isLoading.value = true
             try {
-                val allTasks = repository.getWorkingSet()
-                _cachedAllTasks = allTasks
+                // Get working set for task IDs (needed for WorkingSetItem)
+                val workingSet = repository.getWorkingSet()
+                val idByUuid: Map<String, Long> = workingSet.associate { it.id.toLong() to it.task.uuid }.entries.associate { (id, uuid) -> uuid to id }
+
+                // Get tasks sorted by current sort field
+                val currentFilter = _filter.value
+                val sortedTasks = repository.listTasksSorted(currentFilter, _sortField.value)
+
+                // Wrap sorted TaskInfos as WorkingSetItems, using ID from working set (or 0 if not in working set)
+                val sortedItems = sortedTasks.map { taskInfo ->
+                    WorkingSetItem(id = (idByUuid[taskInfo.uuid] ?: 0L).toULong(), task = taskInfo)
+                }
+                _cachedAllTasks = sortedItems
                 _tasksLoaded = true
 
-                _availableProjects.value = allTasks
+                _availableProjects.value = sortedItems
                     .mapNotNull { it.task.project }
                     .filter { it.isNotBlank() }
                     .distinct()
                     .sorted()
-                    
-                _availableTags.value = allTasks
+
+                _availableTags.value = sortedItems
                     .flatMap { it.task.tags }
                     .filter { it.isNotBlank() }
                     .distinct()
@@ -271,7 +286,7 @@ class TaskViewModel(
             currentFilter.project == null &&
             currentFilter.tag == null
         ) {
-            allTasks
+            allTasks.filter { !it.task.isWaiting }
         } else {
             allTasks.filter { item ->
                 val task = item.task
@@ -285,6 +300,11 @@ class TaskViewModel(
     fun setFilter(filter: TaskFilter) {
         _filter.value = filter
         applyFilter()
+    }
+
+    fun setSortField(sort: SortField) {
+        _sortField.value = sort
+        loadTasks()
     }
     
     fun createTask(description: String, onComplete: (TaskInfo) -> Unit = {}) {
@@ -321,6 +341,48 @@ class TaskViewModel(
                     actionLabel = "Undo",
                     taskUuid = uuid
                 )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun startTask(uuid: String) {
+        viewModelScope.launch {
+            try {
+                val task = repository.startTask(uuid)
+                loadTasks()
+                _snackbarEvent.value = SnackbarEvent(
+                    message = "\"${task.description}\" started"
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun stopTask(uuid: String) {
+        viewModelScope.launch {
+            try {
+                val task = repository.stopTask(uuid)
+                loadTasks()
+                _snackbarEvent.value = SnackbarEvent(
+                    message = "\"${task.description}\" stopped"
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun toggleNext(uuid: String) {
+        viewModelScope.launch {
+            try {
+                val task = repository.getTask(uuid) ?: return@launch
+                val hasNext = task.tags.contains("next")
+                val newTags = if (hasNext) task.tags.filter { it != "next" } else task.tags + "next"
+                repository.updateTask(uuid, TaskUpdate(null, null, newTags, null, null, null, null))
+                loadTasks()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -406,7 +468,10 @@ class TaskViewModel(
                             description = "Fix login flow bug",
                             project = "Development",
                             tags = listOf("backend"),
-                            priority = "H"
+                            priority = "H",
+                            due = null,
+                            wait = null,
+                            recur = null
                         )
                     )
                     android.util.Log.d("TaskViewModel", "DEBUG: Updated task 1")
@@ -424,7 +489,10 @@ class TaskViewModel(
                             description = "Write API documentation",
                             project = "Documentation",
                             tags = listOf("docs"),
-                            priority = "M"
+                            priority = "M",
+                            due = null,
+                            wait = null,
+                            recur = null
                         )
                     )
                     android.util.Log.d("TaskViewModel", "DEBUG: Updated task 2")
@@ -442,7 +510,10 @@ class TaskViewModel(
                             description = "Review pull requests",
                             project = "Development",
                             tags = listOf("review", "urgent"),
-                            priority = "H"
+                            priority = "H",
+                            due = null,
+                            wait = null,
+                            recur = null
                         )
                     )
                     android.util.Log.d("TaskViewModel", "DEBUG: Updated task 3")

@@ -48,7 +48,7 @@ fun FilterRow(
             shape = RectangleShape,
             selected = currentFilter.status == null && currentFilter.project == null && currentFilter.tag == null,
             onClick = {
-                onFilterChange(TaskFilter(null, null, null))
+                onFilterChange(TaskFilter(null, null, null, null))
             },
             label = { Text("All") }
         )

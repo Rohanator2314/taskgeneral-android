@@ -86,7 +86,10 @@ fun TaskEditScreen(
                                 description = description,
                                 project = if (project.isBlank()) null else project,
                                 tags = tags,
-                                priority = priority
+                                priority = priority,
+                                due = null,
+                                wait = null,
+                                recur = null
                             )
 
                             if (isNewTask) {
