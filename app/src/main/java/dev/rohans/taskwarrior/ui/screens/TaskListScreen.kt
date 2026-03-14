@@ -46,28 +46,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import dev.rohans.taskwarrior.navigation.Route
 import dev.rohans.taskwarrior.ui.components.FilterRow
 import dev.rohans.taskwarrior.ui.components.TaskItem
-import dev.rohans.taskwarrior.utils.EncryptedPreferencesHelper
 import dev.rohans.taskwarrior.viewmodel.TaskOperation
 import dev.rohans.taskwarrior.viewmodel.TaskViewModel
-import dev.rohans.taskwarrior.viewmodel.TaskViewModelFactory
 import uniffi.taskgeneral_core.TaskFilter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskListScreen(
     navController: NavController,
-    viewModel: TaskViewModel = viewModel(
-        factory = TaskViewModelFactory(
-            LocalContext.current.filesDir,
-            EncryptedPreferencesHelper.getEncryptedSharedPreferences(LocalContext.current),
-            LocalContext.current
-        )
-    )
+    viewModel: TaskViewModel
 ) {
     val tasks by viewModel.tasks.collectAsState()
     val filter by viewModel.filter.collectAsState()
@@ -124,23 +115,17 @@ fun TaskListScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (isSelectionMode) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    IconButton(onClick = { viewModel.clearSelection() }) {
-                        Icon(Icons.Default.Close, "Close")
-                    }
-                    Text(
-                        text = "${selectedUuids.size} selected",
-                        style = MaterialTheme.typography.titleMedium
+                TopAppBar(
+                    title = { Text("${selectedUuids.size} selected") },
+                    navigationIcon = {
+                        IconButton(onClick = { viewModel.clearSelection() }) {
+                            Icon(Icons.Default.Close, "Close")
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
                     )
-                    Box(modifier = Modifier.padding(end = 8.dp))
-                }
+                )
             } else {
                 TopAppBar(
                     title = { Text("TaskGeneral") },

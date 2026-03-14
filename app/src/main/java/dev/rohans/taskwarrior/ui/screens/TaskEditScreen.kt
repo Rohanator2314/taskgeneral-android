@@ -13,32 +13,18 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import dev.rohans.taskwarrior.utils.EncryptedPreferencesHelper
 import dev.rohans.taskwarrior.viewmodel.TaskViewModel
-import dev.rohans.taskwarrior.viewmodel.TaskViewModelFactory
 import uniffi.taskgeneral_core.TaskUpdate
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TaskEditScreen(
     navController: NavController,
     uuid: String?,
-    viewModel: TaskViewModel = viewModel(
-        factory = TaskViewModelFactory(
-            LocalContext.current.filesDir,
-            EncryptedPreferencesHelper.getEncryptedSharedPreferences(LocalContext.current),
-            LocalContext.current
-        )
-    )
+    viewModel: TaskViewModel
 ) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    
     var description by remember { mutableStateOf("") }
     var project by remember { mutableStateOf("") }
     var tags by remember { mutableStateOf(listOf<String>()) }

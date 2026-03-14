@@ -4,9 +4,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -17,6 +21,9 @@ import dev.rohans.taskwarrior.ui.screens.SyncSettingsScreen
 import dev.rohans.taskwarrior.ui.screens.TaskEditScreen
 import dev.rohans.taskwarrior.ui.screens.TaskListScreen
 import dev.rohans.taskwarrior.ui.theme.TaskGeneralTheme
+import dev.rohans.taskwarrior.utils.EncryptedPreferencesHelper
+import dev.rohans.taskwarrior.viewmodel.TaskViewModel
+import dev.rohans.taskwarrior.viewmodel.TaskViewModelFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,15 +39,27 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun TaskGeneralApp() {
+    val context = LocalContext.current
+    val viewModel: TaskViewModel = viewModel(
+        factory = TaskViewModelFactory(
+            context.filesDir,
+            EncryptedPreferencesHelper.getEncryptedSharedPreferences(context),
+            context
+        )
+    )
     val navController = rememberNavController()
     
     NavHost(
         navController = navController,
         startDestination = Route.TaskList.route,
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None }
     ) {
         composable(Route.TaskList.route) {
-            TaskListScreen(navController)
+            TaskListScreen(navController, viewModel)
         }
         
         composable(
@@ -48,11 +67,11 @@ fun TaskGeneralApp() {
             arguments = listOf(navArgument("uuid") { type = NavType.StringType })
         ) { backStackEntry ->
             val uuid = backStackEntry.arguments?.getString("uuid")
-            TaskEditScreen(navController, uuid)
+            TaskEditScreen(navController, uuid, viewModel)
         }
         
         composable(Route.SyncSettings.route) {
-            SyncSettingsScreen(navController)
+            SyncSettingsScreen(navController, viewModel)
         }
     }
 }

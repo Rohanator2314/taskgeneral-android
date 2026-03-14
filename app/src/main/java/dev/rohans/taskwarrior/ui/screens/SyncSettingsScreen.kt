@@ -27,16 +27,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import dev.rohans.taskwarrior.utils.EncryptedPreferencesHelper
 import dev.rohans.taskwarrior.viewmodel.TaskViewModel
-import dev.rohans.taskwarrior.viewmodel.TaskViewModelFactory
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
@@ -54,13 +50,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 @Composable
 fun SyncSettingsScreen(
     navController: NavController,
-    viewModel: TaskViewModel = viewModel(
-        factory = TaskViewModelFactory(
-            LocalContext.current.filesDir,
-            EncryptedPreferencesHelper.getEncryptedSharedPreferences(LocalContext.current),
-            LocalContext.current
-        )
-    )
+    viewModel: TaskViewModel
 ) {
     val serverUrl by viewModel.serverUrl.collectAsState()
     val encryptionSecret by viewModel.encryptionSecret.collectAsState()
