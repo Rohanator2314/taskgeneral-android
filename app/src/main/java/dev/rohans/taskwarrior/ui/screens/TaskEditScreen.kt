@@ -11,6 +11,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -20,6 +22,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import dev.rohans.taskwarrior.viewmodel.TaskViewModel
@@ -47,7 +51,6 @@ fun TaskEditScreen(
     var showWaitDatePicker by remember { mutableStateOf(false) }
 
     var isActive by remember { mutableStateOf(false) }
-    var isNext by remember { mutableStateOf(false) }
     
     var isLoading by remember { mutableStateOf(false) }
     val isNewTask = uuid == null || uuid == "new"
@@ -65,7 +68,6 @@ fun TaskEditScreen(
                     waitDate = task.wait ?: ""
                     recurrence = task.recur ?: ""
                     isActive = task.isActive
-                    isNext = task.tags.contains("next")
                 }
                 isLoading = false
             }
@@ -325,11 +327,11 @@ fun TaskEditScreen(
                     OutlinedTextField(
                         value = currentTagInput,
                         onValueChange = { input ->
-                            if (input.endsWith(",") || input.endsWith("\n")) {
-                                val newTag = input.trim().dropLast(1)
-                                if (newTag.isNotBlank() && !tags.contains(newTag)) {
-                                    tags = tags + newTag
-                                }
+                            if (input.endsWith(",")) {
+                                val newTags = input.dropLast(1).trim()
+                                    .split("\\s+".toRegex())
+                                    .filter { it.isNotBlank() && !tags.contains(it) }
+                                if (newTags.isNotEmpty()) tags = tags + newTags
                                 currentTagInput = ""
                             } else {
                                 currentTagInput = input
@@ -337,7 +339,15 @@ fun TaskEditScreen(
                         },
                         label = { Text("Tags (Type and press ',' or Enter)") },
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = {
+                            val newTags = currentTagInput.trim()
+                                .split("\\s+".toRegex())
+                                .filter { it.isNotBlank() && !tags.contains(it) }
+                            if (newTags.isNotEmpty()) tags = tags + newTags
+                            currentTagInput = ""
+                        })
                     )
                     
                     if (tags.isNotEmpty()) {
@@ -382,24 +392,13 @@ fun TaskEditScreen(
                                     isActive = true
                                 }
                             },
-                            colors = if (isActive) ButtonDefaults.buttonColors() else ButtonDefaults.outlinedButtonColors().let {
-                                ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            colors = if (isActive) ButtonDefaults.buttonColors() else ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = Color.White
+                            )
                         ) {
                             Text(if (isActive) "Stop Task" else "Start Task")
                         }
-                        FilterChip(
-                            shape = RectangleShape,
-                            selected = isNext,
-                            onClick = {
-                                viewModel.toggleNext(uuid!!)
-                                isNext = !isNext
-                            },
-                            label = { Text("Next") }
-                        )
                     }
                 }
             }
