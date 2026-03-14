@@ -598,7 +598,7 @@ fn age_urgency(task: &Task) -> f64 {
         Some(entry) => {
             let now = chrono::Utc::now();
             let age_days = (now - entry).num_seconds() as f64 / 86400.0;
-            (age_days / 365.0).min(1.0).max(0.0)
+            (age_days / 365.0).clamp(0.0, 1.0)
         }
     }
 }
@@ -626,7 +626,7 @@ fn calculate_urgency(task: &Task) -> f64 {
         .any(|t| t.to_string() == "next");
     let has_project = task.get_value("project").is_some();
 
-    let urgency = 15.0 * if has_next { 1.0 } else { 0.0 }
+    15.0 * if has_next { 1.0 } else { 0.0 }
         + 12.0 * due_urgency(task)
         + 6.0 * if priority == "H" { 1.0 } else { 0.0 }
         + 4.0 * if task.is_active() { 1.0 } else { 0.0 }
@@ -635,9 +635,7 @@ fn calculate_urgency(task: &Task) -> f64 {
         + 1.8 * if priority == "L" { 1.0 } else { 0.0 }
         + 1.0 * tag_urgency(task)
         + 1.0 * if has_project { 1.0 } else { 0.0 }
-        + (-3.0) * if task.is_waiting() { 1.0 } else { 0.0 };
-
-    urgency
+        + (-3.0) * if task.is_waiting() { 1.0 } else { 0.0 }
 }
 
 fn task_to_info(task: &Task) -> TaskInfo {
