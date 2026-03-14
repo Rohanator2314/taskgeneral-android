@@ -2,6 +2,7 @@ package dev.rohans.taskwarrior.viewmodel
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rohans.taskwarrior.data.TaskRepository
@@ -186,7 +187,9 @@ class TaskViewModel(
             viewModelScope.launch {
                 try {
                     repository.configureSync(url, secret, cid)
-                } catch (_: Exception) { }
+                } catch (e: Exception) {
+                    Log.w("TaskViewModel", "Failed to configure sync on init", e)
+                }
             }
         }
     }
