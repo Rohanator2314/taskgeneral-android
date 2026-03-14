@@ -47,9 +47,12 @@ rustup target add aarch64-linux-android armv7-linux-androideabi x86_64-linux-and
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/Rohanator2314/taskwarrior-android.git
-cd taskwarrior-android
+git clone --recursive https://github.com/Rohanator2314/taskgeneral-android.git
+cd taskgeneral-android
 ```
+
+> **Note:** The `--recursive` flag initialises the `rust/taskgeneral-core` submodule automatically.
+> If you already cloned without it, run: `git submodule update --init`
 
 ### 2. Build Rust core (optional - Gradle does this automatically)
 

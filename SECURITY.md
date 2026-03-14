@@ -10,7 +10,7 @@
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Report vulnerabilities privately via [GitHub Security Advisories](https://github.com/Rohanator2314/taskwarrior-android/security/advisories/new), or by emailing the maintainers directly (see the repository's contact information).
+Report vulnerabilities privately via [GitHub Security Advisories](https://github.com/Rohanator2314/taskgeneral-android/security/advisories/new), or by emailing the maintainers directly (see the repository's contact information).
 
 Include in your report:
 - A description of the vulnerability and its potential impact

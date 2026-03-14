@@ -57,9 +57,9 @@ Install the NDK via Android Studio: **SDK Manager → SDK Tools → NDK (Side by
 ## Environment setup
 
 ```bash
-# 1. Fork and clone
-git clone https://github.com/your-org/taskwarrior-android.git
-cd taskwarrior-android
+# 1. Fork and clone (--recursive initialises the rust/taskgeneral-core submodule)
+git clone --recursive https://github.com/Rohanator2314/taskgeneral-android.git
+cd taskgeneral-android
 
 # 2. Verify Rust builds and tests pass
 cd rust/taskgeneral-core

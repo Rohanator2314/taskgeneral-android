@@ -8,7 +8,7 @@ Accepted
 
 ## Context
 
-The taskwarrior-android project requires a modern, performant, and maintainable architecture that bridges high-performance logic with a native Android user experience. The core Taskwarrior logic is best implemented in Rust for safety and performance, while the UI needs to feel at home on the Android platform.
+The taskgeneral-android project requires a modern, performant, and maintainable architecture that bridges high-performance logic with a native Android user experience. The core Taskwarrior logic is best implemented in Rust for safety and performance, while the UI needs to feel at home on the Android platform.
 
 We evaluated several architectural approaches for building this application:
 

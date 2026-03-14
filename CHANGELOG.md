@@ -54,4 +54,4 @@ Initial public release.
 ---
 
 <!-- Links -->
-[1.0.0]: https://github.com/Rohanator2314/taskwarrior-android/releases/tag/v1.0.0
+[1.0.0]: https://github.com/Rohanator2314/taskgeneral-android/releases/tag/v1.0.0
