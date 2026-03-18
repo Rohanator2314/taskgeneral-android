@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TaskGeneral</string>
+    <string name="quick_add_widget">Quick Add</string>
+    <string name="add_task">Add Task</string>
+    <string name="task_description">Task description</string>
+    <string name="next_task">Next Task</string>
+    <string name="no_tasks">No tasks</string>
+    <string name="complete_task">Complete</string>
+    <string name="start_task">Start</string>
+    <string name="quick_add_1x1">Quick Add (1x1)</string>
+    <string name="quick_add_1x2">Quick Add</string>
+    <string name="next_task_1x1">Next Task (1x1)</string>
+    <string name="next_task_resizable">Next Task</string>
+</resources>
