@@ -45,7 +45,7 @@ class NextTaskWidgetProvider : AppWidgetProvider() {
     private fun completeTask(context: Context, uuid: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val dataDir = File(context.filesDir, "task_data")
+                val dataDir = context.filesDir
                 val repository = TaskRepository(dataDir)
                 repository.completeTask(uuid)
                 updateAllWidgets(context)
@@ -59,27 +59,12 @@ class NextTaskWidgetProvider : AppWidgetProvider() {
     private fun startTask(context: Context, uuid: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val dataDir = File(context.filesDir, "task_data")
+                val dataDir = context.filesDir
                 val repository = TaskRepository(dataDir)
                 repository.startTask(uuid)
                 updateAllWidgets(context)
             } catch (e: Exception) {
                 android.util.Log.e("NextTaskWidget", "Failed to start task", e)
-                Toast.makeText(context, "Failed to start task: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-        }
-    }
-
-    private fun startTask(context: Context, uuid: String) {
-        CoroutineScope(Dispatchers.Main).launch {
-            try {
-                val dataDir = File(context.filesDir, "task_data")
-                val repository = TaskRepository(dataDir)
-                repository.startTask(uuid)
-                updateAllWidgets(context)
-            } catch (e: Exception) {
                 Toast.makeText(context, "Failed to start task: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
@@ -97,7 +82,7 @@ class NextTaskWidgetProvider : AppWidgetProvider() {
         ) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
-                    val dataDir = File(context.filesDir, "task_data")
+                    val dataDir = context.filesDir
                     val repository = TaskRepository(dataDir)
 
                     val filter = TaskFilter(
