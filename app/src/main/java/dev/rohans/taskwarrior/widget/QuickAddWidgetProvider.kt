@@ -33,6 +33,7 @@ class QuickAddWidgetProvider : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.widget_quick_add_1x1)
 
             val intent = Intent(context, MainActivity::class.java).apply {
+                putExtra("NAVIGATE_TO", "task_edit/new")
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             }
             val pendingIntent = PendingIntent.getActivity(

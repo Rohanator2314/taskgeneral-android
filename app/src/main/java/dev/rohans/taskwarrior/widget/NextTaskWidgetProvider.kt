@@ -43,16 +43,32 @@ class NextTaskWidgetProvider : AppWidgetProvider() {
     }
 
     private fun completeTask(context: Context, uuid: String) {
-        CoroutineScope(Dispatchers.Main).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 val dataDir = File(context.filesDir, "task_data")
                 val repository = TaskRepository(dataDir)
                 repository.completeTask(uuid)
-                Toast.makeText(context, "Task completed", Toast.LENGTH_SHORT).show()
                 updateAllWidgets(context)
             } catch (e: Exception) {
+                android.util.Log.e("NextTaskWidget", "Failed to complete task", e)
                 Toast.makeText(context, "Failed to complete task: ${e.message}", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    private fun startTask(context: Context, uuid: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val dataDir = File(context.filesDir, "task_data")
+                val repository = TaskRepository(dataDir)
+                repository.startTask(uuid)
+                updateAllWidgets(context)
+            } catch (e: Exception) {
+                android.util.Log.e("NextTaskWidget", "Failed to start task", e)
+                Toast.makeText(context, "Failed to start task: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
         }
     }
 
@@ -79,7 +95,7 @@ class NextTaskWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int
         ) {
-            CoroutineScope(Dispatchers.Main).launch {
+            CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val dataDir = File(context.filesDir, "task_data")
                     val repository = TaskRepository(dataDir)
@@ -93,19 +109,11 @@ class NextTaskWidgetProvider : AppWidgetProvider() {
                     val tasks = repository.listTasksSorted(filter, SortField.URGENCY)
                     val nextTask = tasks.firstOrNull()
 
-                    val views = if (nextTask != null) {
-                        RemoteViews(context.packageName, R.layout.widget_next_task_1x1)
-                    } else {
-                        RemoteViews(context.packageName, R.layout.widget_next_task_1x1)
-                    }
+                    val views = RemoteViews(context.packageName, R.layout.widget_next_task_1x1)
 
                     if (nextTask != null) {
                         views.setTextViewText(R.id.task_description, nextTask.description)
-                    } else {
-                        views.setTextViewText(R.id.task_description, context.getString(R.string.no_tasks))
-                    }
 
-                    if (nextTask != null) {
                         val completeIntent = Intent(context, NextTaskWidgetProvider::class.java).apply {
                             action = ACTION_COMPLETE_TASK
                             putExtra(EXTRA_TASK_UUID, nextTask.uuid)
@@ -117,12 +125,15 @@ class NextTaskWidgetProvider : AppWidgetProvider() {
                             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
                         )
                         views.setOnClickPendingIntent(R.id.complete_button, completePendingIntent)
+                    } else {
+                        views.setTextViewText(R.id.task_description, context.getString(R.string.no_tasks))
                     }
 
                     appWidgetManager.updateAppWidget(appWidgetId, views)
                 } catch (e: Exception) {
+                    android.util.Log.e("NextTaskWidget", "Error loading task", e)
                     val views = RemoteViews(context.packageName, R.layout.widget_next_task_1x1)
-                    views.setTextViewText(R.id.task_description, "Error loading task")
+                    views.setTextViewText(R.id.task_description, "Error: ${e.message}")
                     appWidgetManager.updateAppWidget(appWidgetId, views)
                 }
             }

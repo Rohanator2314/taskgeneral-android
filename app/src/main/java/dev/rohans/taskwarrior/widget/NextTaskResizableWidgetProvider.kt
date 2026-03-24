@@ -42,16 +42,32 @@ class NextTaskResizableWidgetProvider : AppWidgetProvider() {
     }
 
     private fun completeTask(context: Context, uuid: String) {
-        CoroutineScope(Dispatchers.Main).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 val dataDir = File(context.filesDir, "task_data")
                 val repository = TaskRepository(dataDir)
                 repository.completeTask(uuid)
-                Toast.makeText(context, "Task completed", Toast.LENGTH_SHORT).show()
                 updateAllWidgets(context)
             } catch (e: Exception) {
+                android.util.Log.e("NextTaskResizableWidget", "Failed to complete task", e)
                 Toast.makeText(context, "Failed to complete task: ${e.message}", Toast.LENGTH_SHORT).show()
             }
+        }
+    }
+
+    private fun startTask(context: Context, uuid: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val dataDir = File(context.filesDir, "task_data")
+                val repository = TaskRepository(dataDir)
+                repository.startTask(uuid)
+                updateAllWidgets(context)
+            } catch (e: Exception) {
+                android.util.Log.e("NextTaskResizableWidget", "Failed to start task", e)
+                Toast.makeText(context, "Failed to start task: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
         }
     }
 
@@ -78,7 +94,7 @@ class NextTaskResizableWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int
         ) {
-            CoroutineScope(Dispatchers.Main).launch {
+            CoroutineScope(Dispatchers.IO).launch {
                 try {
                     val dataDir = File(context.filesDir, "task_data")
                     val repository = TaskRepository(dataDir)
@@ -97,12 +113,7 @@ class NextTaskResizableWidgetProvider : AppWidgetProvider() {
                     if (nextTask != null) {
                         views.setTextViewText(R.id.task_description, nextTask.description)
                         views.setTextViewText(R.id.task_project, nextTask.project ?: "")
-                    } else {
-                        views.setTextViewText(R.id.task_description, context.getString(R.string.no_tasks))
-                        views.setTextViewText(R.id.task_project, "")
-                    }
 
-                    if (nextTask != null) {
                         val completeIntent = Intent(context, NextTaskResizableWidgetProvider::class.java).apply {
                             action = ACTION_COMPLETE_TASK
                             putExtra(EXTRA_TASK_UUID, nextTask.uuid)
@@ -126,12 +137,16 @@ class NextTaskResizableWidgetProvider : AppWidgetProvider() {
                             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
                         )
                         views.setOnClickPendingIntent(R.id.start_button, startPendingIntent)
+                    } else {
+                        views.setTextViewText(R.id.task_description, context.getString(R.string.no_tasks))
+                        views.setTextViewText(R.id.task_project, "")
                     }
 
                     appWidgetManager.updateAppWidget(appWidgetId, views)
                 } catch (e: Exception) {
+                    android.util.Log.e("NextTaskResizableWidget", "Error loading task", e)
                     val views = RemoteViews(context.packageName, R.layout.widget_next_task_resizable)
-                    views.setTextViewText(R.id.task_description, "Error loading task")
+                    views.setTextViewText(R.id.task_description, "Error: ${e.message}")
                     appWidgetManager.updateAppWidget(appWidgetId, views)
                 }
             }

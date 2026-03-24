@@ -8,6 +8,7 @@ import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -30,16 +31,19 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        val navigateTo = intent.getStringExtra("NAVIGATE_TO")
+        
         setContent {
             TaskGeneralTheme {
-                TaskGeneralApp()
+                TaskGeneralApp(navigateTo)
             }
         }
     }
 }
 
 @Composable
-fun TaskGeneralApp() {
+fun TaskGeneralApp(navigateTo: String? = null) {
     val context = LocalContext.current
     val viewModel: TaskViewModel = viewModel(
         factory = TaskViewModelFactory(
@@ -49,6 +53,14 @@ fun TaskGeneralApp() {
         )
     )
     val navController = rememberNavController()
+    
+    LaunchedEffect(navigateTo) {
+        navigateTo?.let {
+            navController.navigate(it) {
+                launchSingleTop = true
+            }
+        }
+    }
     
     NavHost(
         navController = navController,

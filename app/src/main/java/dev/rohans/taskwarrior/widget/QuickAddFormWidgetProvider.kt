@@ -39,7 +39,7 @@ class QuickAddFormWidgetProvider : AppWidgetProvider() {
     }
 
     private fun addTask(context: Context, description: String) {
-        CoroutineScope(Dispatchers.Main).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
                 val dataDir = File(context.filesDir, "task_data")
                 val repository = TaskRepository(dataDir)
@@ -58,6 +58,7 @@ class QuickAddFormWidgetProvider : AppWidgetProvider() {
 
                 NextTaskWidgetProvider.updateAllWidgets(context)
             } catch (e: Exception) {
+                android.util.Log.e("QuickAddFormWidget", "Failed to add task", e)
                 Toast.makeText(context, "Failed to add task: ${e.message}", Toast.LENGTH_SHORT).show()
             }
         }
