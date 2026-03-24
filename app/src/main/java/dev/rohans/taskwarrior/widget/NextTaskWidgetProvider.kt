@@ -90,7 +90,7 @@ class NextTaskWidgetProvider : AppWidgetProvider() {
                         tag = null,
                         sortBy = null
                     )
-                    val tasks = repository.listTasksSorted(filter, SortField.Urgency)
+                    val tasks = repository.listTasksSorted(filter, SortField.URGENCY)
                     val nextTask = tasks.firstOrNull()
 
                     val views = if (nextTask != null) {
