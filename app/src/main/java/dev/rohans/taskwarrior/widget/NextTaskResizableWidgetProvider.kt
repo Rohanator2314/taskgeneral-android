@@ -13,6 +13,8 @@ import dev.rohans.taskwarrior.data.TaskRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import uniffi.taskgeneral_core.TaskFilter
+import uniffi.taskgeneral_core.SortField
 import java.io.File
 
 class NextTaskResizableWidgetProvider : AppWidgetProvider() {
@@ -81,11 +83,13 @@ class NextTaskResizableWidgetProvider : AppWidgetProvider() {
                     val dataDir = File(context.filesDir, "task_data")
                     val repository = TaskRepository(dataDir)
 
-                    val filter = dev.rohans.taskwarrior.data.TaskFilter(
+                    val filter = TaskFilter(
                         status = "pending",
-                        sortBy = dev.rohans.taskwarrior.data.SortField.Urgency
+                        project = null,
+                        tag = null,
+                        sortBy = null
                     )
-                    val tasks = repository.listTasksSorted(filter, dev.rohans.taskwarrior.data.SortField.Urgency)
+                    val tasks = repository.listTasksSorted(filter, SortField.Urgency)
                     val nextTask = tasks.firstOrNull()
 
                     val views = RemoteViews(context.packageName, R.layout.widget_next_task_resizable)

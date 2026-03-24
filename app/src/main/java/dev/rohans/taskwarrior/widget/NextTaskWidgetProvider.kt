@@ -10,10 +10,12 @@ import android.widget.RemoteViews
 import android.widget.Toast
 import dev.rohans.taskwarrior.R
 import dev.rohans.taskwarrior.data.TaskRepository
-import dev.rohans.taskwarrior.data.TaskUpdate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import uniffi.taskgeneral_core.TaskFilter
+import uniffi.taskgeneral_core.SortField
+import uniffi.taskgeneral_core.TaskUpdate
 import java.io.File
 
 class NextTaskWidgetProvider : AppWidgetProvider() {
@@ -82,11 +84,13 @@ class NextTaskWidgetProvider : AppWidgetProvider() {
                     val dataDir = File(context.filesDir, "task_data")
                     val repository = TaskRepository(dataDir)
 
-                    val filter = dev.rohans.taskwarrior.data.TaskFilter(
+                    val filter = TaskFilter(
                         status = "pending",
-                        sortBy = dev.rohans.taskwarrior.data.SortField.Urgency
+                        project = null,
+                        tag = null,
+                        sortBy = null
                     )
-                    val tasks = repository.listTasksSorted(filter, dev.rohans.taskwarrior.data.SortField.Urgency)
+                    val tasks = repository.listTasksSorted(filter, SortField.Urgency)
                     val nextTask = tasks.firstOrNull()
 
                     val views = if (nextTask != null) {

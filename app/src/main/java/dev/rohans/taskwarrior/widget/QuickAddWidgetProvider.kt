@@ -51,7 +51,9 @@ class QuickAddWidgetProvider : AppWidgetProvider() {
             val appWidgetIds = appWidgetManager.getAppWidgetIds(
                 ComponentName(context, QuickAddWidgetProvider::class.java)
             )
-            onUpdate(context, appWidgetManager, appWidgetIds)
+            for (appWidgetId in appWidgetIds) {
+                updateWidget(context, appWidgetManager, appWidgetId)
+            }
         }
     }
 }
