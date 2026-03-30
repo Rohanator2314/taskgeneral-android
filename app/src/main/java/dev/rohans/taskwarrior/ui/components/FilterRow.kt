@@ -48,10 +48,10 @@ fun FilterRow(
         // Status dropdown — shows "All" when null, otherwise shows selected status
         FilterDropdown(
             label = "Status",
-            selectedItem = currentFilter.status,
-            items = listOf("pending", "completed", "waiting", "deleted"),
+            selectedItem = currentFilter.status?.replaceFirstChar { it.uppercase() },
+            items = listOf("Pending", "Completed", "Waiting", "Deleted"),
             onItemSelected = { selected ->
-                onFilterChange(TaskFilter(selected, currentFilter.project, currentFilter.tag, null))
+                onFilterChange(TaskFilter(selected?.lowercase(), currentFilter.project, currentFilter.tag, null))
             }
         )
 
