@@ -3,7 +3,7 @@
     android:initialLayout="@layout/widget_next_task_1x1"
     android:minWidth="80dp"
     android:minHeight="80dp"
-    android:previewImage="@android:drawable/checkbox_off_background"
+    android:previewImage="@drawable/widget_preview_next_task"
     android:resizeMode="none"
     android:targetCellWidth="2"
     android:targetCellHeight="2"

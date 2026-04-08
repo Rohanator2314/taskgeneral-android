@@ -3,7 +3,7 @@
     android:initialLayout="@layout/widget_quick_add_1x1"
     android:minWidth="40dp"
     android:minHeight="40dp"
-    android:previewImage="@android:drawable/ic_input_add"
+    android:previewImage="@drawable/widget_preview_quick_add"
     android:resizeMode="none"
     android:targetCellWidth="1"
     android:targetCellHeight="1"

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF" />
+            <corners android:radius="16dp" />
+            <stroke
+                android:width="1dp"
+                android:color="#E0E0E0" />
+        </shape>
+    </item>
+    <!-- Task text representation -->
+    <item
+        android:top="16dp"
+        android:left="16dp"
+        android:right="16dp"
+        android:bottom="40dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#424242" />
+            <corners android:radius="4dp" />
+        </shape>
+    </item>
+    <!-- Complete button representation -->
+    <item
+        android:width="24dp"
+        android:height="24dp"
+        android:bottom="8dp"
+        android:gravity="center_horizontal|bottom">
+        <shape android:shape="oval">
+            <stroke
+                android:width="2dp"
+                android:color="#4CAF50" />
+        </shape>
+    </item>
+</layer-list>
